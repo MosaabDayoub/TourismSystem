@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\Response;
 
 class UserController extends Controller
 {
@@ -29,15 +29,15 @@ class UserController extends Controller
             }
 
             // Create the user
-            $newuser=User::Create([
-              "name"=>$request->input("name"),
-              "image"=>$request->input("image"),
-              "email"=>$request->input("email"),
-              "password"=>$request->input("password"),
+            $newuser = User::Create([
+                "name" => $request->input("name"),
+                "image" => $request->input("image"),
+                "email" => $request->input("email"),
+                "password" => Hash::make($request->input("password")),
+                "age" => $request->input("age"),
             ]);
-            $token1=$newuser->createtoken("auth_token");
-            $token =response()->json(["token" => "token:" .$token1->plainTextToken]);
-            
+            $token1 = $newuser->createToken("auth_token");
+
             return response()->json([
                 'message' => 'User registered successfully',
                 'user' => [
@@ -45,14 +45,10 @@ class UserController extends Controller
                     'name' => $newuser->name,
                     'email' => $newuser->email,
                     'image' => null,
-                    'token' => $token,
+                    'age' => $newuser->age,
+                    'token' => $token1->plainTextToken,
                 ]
             ], Response::HTTP_OK);
-        } catch (ValidationException $e) {
-
-            return response()->json([
-                'message' => 'some information are not valid',
-            ], Response::HTTP_BAD_REQUEST);
         } catch (\Exception $e) {
             // \Log::error('User registration error: ' . $e->getMessage());
 
@@ -85,9 +81,9 @@ class UserController extends Controller
 
             // if the user exists in the DB
             if ($user && Hash::check($request->password, $user->password)) {
-              
-                $token1=$user->createtoken("auth_token");
-                $token =response()->json(["token" => "token:" .$token1->plainTextToken]);
+
+                $token1 = $user->createToken("auth_token");
+
                 return response()->json([
                     "message" => "Login successful! Welcome back.",
                     'user' => [
@@ -95,7 +91,8 @@ class UserController extends Controller
                         'name' => $user->name,
                         'email' => $user->email,
                         'image' => null,
-                        'token' => $token,
+                        'age' => $user->age,
+                        'token' => $token1->plainTextToken,
                     ],
                 ], Response::HTTP_OK);
             } else {
