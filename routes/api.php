@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\TripController;
 use App\Http\Controllers\GenerateTripController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -19,9 +20,10 @@ use App\Http\Controllers\GenerateTripController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
-Route::post('/signup',UserController::class.'@signup');
-Route::post('/login',UserController::class.'@login');
-Route::put('/create_trip',TripController::class.'@create_trip')->middleware('auth:sanctum');
-Route::put('/generate_trip',GenerateTripController::class.'@generate');
+Route::post('/signup', UserController::class . '@signup');
+Route::post('/login', UserController::class . '@login');
+Route::put('/create_trip', TripController::class . '@create_trip')->middleware('auth:sanctum');
+Route::put('/generate_trip', GenerateTripController::class . '@generate');
 
-
+Route::post('/update-image', [UserController::class, "upload_image"]);
+Route::put('/delete-image', [UserController::class, "delete_image"]);

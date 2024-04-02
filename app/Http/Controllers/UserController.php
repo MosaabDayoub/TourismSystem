@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
@@ -110,5 +111,79 @@ class UserController extends Controller
             );
         }
     }
+
+    public function upload_image(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'userId' => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'image not valid'], 400);
+        }
+
+        $user = User::where('id', '=', $request->userId)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        try {
+            // Check if the user already has a profile picture
+            if ($user->image_refrence) {
+                Storage::delete($user->image_refrence);
+            }
+
+            $path = $request->file('image')->store('public/profile_pictures');
+
+            // Update the user's profile picture field in the database
+            $user->image_refrence = $path;
+            $user->save();
+
+            $imageUrl = Storage::url($path);
+
+            return response()->json([
+                'image' => $imageUrl,
+                'message' => 'Profile picture uploaded successfully.'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(
+                ['message' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    public function delete_image(Request $request)
+    {
+        $user = User::where('id', '=', $request->userId)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        try {
+            // Check if the user already has a profile picture
+            if ($user->image_refrence) {
+                Storage::delete($user->image_refrence);
+            }
+
+            // Update the user's profile picture field in the database
+            $user->image_refrence = null;
+            $user->save();
+
+            return response()->json([
+                'image' => $user->image_refrence,
+                'message' => 'Profile picture deleted successfully.'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(
+                ['message' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
 
 }
