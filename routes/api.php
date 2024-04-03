@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\TripController;
 use App\Http\Controllers\GenerateTripController;
+use App\Http\Controllers\SearchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,3 +28,5 @@ Route::put('/generate_trip', GenerateTripController::class . '@generate');
 
 Route::post('/update-image', [UserController::class, "upload_image"]);
 Route::put('/delete-image', [UserController::class, "delete_image"]);
+
+Route::get('/search', [SearchController::class, 'search']);
