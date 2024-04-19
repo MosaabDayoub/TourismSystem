@@ -10,8 +10,10 @@ use Graphp\GraphViz\GraphViz;
 use App\Services\GenerateTripController\CustomGraph;
 use SplPriorityQueue;
 
-class DijkstraAlgorithm {
-    public static function allShortestPaths(Graph $graph, $sourceNode) {
+class DijkstraAlgorithm
+{
+    public static function allShortestPaths(Graph $graph, $sourceNode)
+    {
         $distances = [];
         $previous = [];
         $nodeQueue = new SplPriorityQueue();
@@ -28,7 +30,7 @@ class DijkstraAlgorithm {
         // Distance from source to source is 0
         $distances[$sourceNode->getId()] = 0;
         $nodeQueue->insert($sourceNode, PHP_INT_MAX);
-        
+
         while (!$nodeQueue->isEmpty()) {
             // Find the vertex with the minimum distance from the source among the unvisited vertices
             $minVertex = $nodeQueue->extract();
@@ -37,11 +39,11 @@ class DijkstraAlgorithm {
             // update the distances for all neighpor of this node
             foreach ($minVertex->getEdges() as $edge) {
                 $neighbor = $edge->getVertexEnd();
-                
+
                 if ($neighbor === $minVertex) {
                     continue; // Ignore the way back
                 }
-                
+
                 $alt = $distances[$minVertexId] + $edge->getWeight();
                 if ($alt < $distances[$neighbor->getId()]) {
                     $distances[$neighbor->getId()] = $alt;
@@ -50,10 +52,10 @@ class DijkstraAlgorithm {
                     $nodeQueue->insert($neighbor, $alt);
                 }
             }
-           
+
         }
-        
-       
+
+
 
 
         // return the shortst paths
@@ -65,47 +67,15 @@ class DijkstraAlgorithm {
 
         return array($distances, $previous, $paths);
     }
-    
-    private static function buildPath(&$previous, $vertex) {
+
+    private static function buildPath(&$previous, $vertex)
+    {
         $path = array($vertex->getId());
         while ($previous[$vertex->getId()] !== null) {
             $vertex = $previous[$vertex->getId()];
             $path[] = $vertex->getId();
         }
-        
+
         return $path;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// 
