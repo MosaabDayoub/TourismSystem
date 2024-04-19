@@ -264,17 +264,19 @@ class CustomGraph extends Graph
 
         }
         //create level6 nightplace
-        $level6 = [];
-        foreach ($places_multi['night'] as $nightplaces => $nightplace) {
+        if (key_exists('night', $places_multi)) {
+            $level6 = [];
+            foreach ($places_multi['night'] as $nightplaces => $nightplace) {
 
-            $nodelevel6 = self::createNode($graph, $nightplace);
-            $level6[] = $nodelevel6;
+                $nodelevel6 = self::createNode($graph, $nightplace);
+                $level6[] = $nodelevel6;
 
-            foreach($level5 as $placeCnode) {
+                foreach($level5 as $placeCnode) {
 
-                self::addWeightedEdge($placeCnode, $nodelevel6);
+                    self::addWeightedEdge($placeCnode, $nodelevel6);
 
 
+                }
             }
         }
 
@@ -285,13 +287,19 @@ class CustomGraph extends Graph
 
             $nodelevel7 = self::createNode($graph, $Resturant2);
             $resturants_level2[] = $nodelevel7;
+            if (key_exists('night', $places_multi)) {
+                foreach($level6 as $nightnode) {
 
-            foreach($level6 as $nightnode) {
+                    self::addWeightedEdge($nightnode, $nodelevel7);
 
-                self::addWeightedEdge($nightnode, $nodelevel7);
+                }
 
+            } else {
+                foreach($level5 as $level5node) {
+
+                    self::addWeightedEdge($level5node, $nodelevel7);
+                }
             }
-
         }
 
         //create level8 (fakenode)

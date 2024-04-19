@@ -72,6 +72,7 @@ class GenerateTripController extends Controller
         ->join('country', 'City.country', '=', 'country.country_name')
         ->select('City.name as name', "city.capital")
         ->where('country.country_name', '=', $Data['tocountry'])
+        ->where('City.name', '=', "florence")
         ->get()->toArray();
 
 
@@ -123,6 +124,8 @@ class GenerateTripController extends Controller
                 $path = end($paths);
 
                 $currenthotel = $graph1->getvertex($path[1]);
+                $nodeAttributes = $currenthotel->getAttributeBag();
+                $hotelAttributes = $nodeAttributes->getAttributes();
 
 
             } else { //other days
@@ -147,7 +150,7 @@ class GenerateTripController extends Controller
 
 
                     $graph = new Graph();
-                    $graph1 = CustomGraph::buildGraph($places_day, $graph, $changecity, null);      // create A custom graph which contain the Possible paths for USER:
+                    $graph1 = CustomGraph::buildGraph($places_day, $graph, $changecity, $hotelAttributes);      // create A custom graph which contain the Possible paths for USER:
                     $sourceNode = $graph1->getVertex(0);
                     $sourcNodeType = $sourceNode->getAttribute('name');
 
@@ -168,6 +171,9 @@ class GenerateTripController extends Controller
 
                     list($distances, $previous, $paths) = DijkstraAlgorithm::allShortestPaths($graph1, $currenthotel);
                     $path = end($paths);
+                    $currenthotel = $graph1->getvertex($path[0]);
+                    $nodeAttributes = $currenthotel->getAttributeBag();
+                    $hotelAttributes = $nodeAttributes->getAttributes();
                 }
 
             }
