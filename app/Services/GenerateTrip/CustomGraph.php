@@ -182,6 +182,30 @@ class CustomGraph extends Graph
                 }
             }
 
+        } elseif(key_exists('natural', $places_multi)) {
+            foreach ($places_multi['natural'] as $places) {
+
+                $nodelevel3 = self::createNode($graph, $places);
+                $level3[] = $nodelevel3 ;
+
+                foreach($resturants_level1 as $resturantnode1) {
+
+                    self::addWeightedEdge($resturantnode1, $nodelevel3);
+
+                }
+            }
+        } elseif(key_exists('shopping', $places_multi)) {
+            foreach ($places_multi['shopping'] as $places) {
+
+                $nodelevel3 = self::createNode($graph, $places);
+                $level3[] = $nodelevel3 ;
+
+                foreach($resturants_level1 as $resturantnode1) {
+
+                    self::addWeightedEdge($resturantnode1, $nodelevel3);
+
+                }
+            }
         } else {
             foreach ($places_multi['old'] as $oldplaces => $oldplace) {
 
@@ -211,7 +235,7 @@ class CustomGraph extends Graph
 
                 }
             }
-        } else {
+        } elseif(key_exists('natural', $places_multi) && key_exists('shopping', $places_multi)) {
             $placesB = array_merge($places_multi['natural'], $places_multi['shopping']);
 
             foreach ($placesB as $places2) {
@@ -221,12 +245,34 @@ class CustomGraph extends Graph
 
                 foreach($level3 as $placenodeA) {
 
-                    self::addWeightedEdge($placenode4, $nodelevel4);
+                    self::addWeightedEdge($placenodeA, $nodelevel4);
 
                 }
             }
 
 
+        } elseif(key_exists('shopping', $places_multi)) {
+            foreach ($places_multi['shopping'] as $places2) {
+
+                $nodelevel4 = self::createNode($graph, $places2);
+                $level4[] = $nodelevel4 ;
+
+                foreach($level3 as $placenodeA) {
+
+                    self::addWeightedEdge($placenodeA, $nodelevel4);
+                }
+            }
+        } elseif(key_exists('natural', $places_multi)) {
+            foreach ($places_multi['natural'] as $places2) {
+
+                $nodelevel4 = self::createNode($graph, $places2);
+                $level4[] = $nodelevel4 ;
+
+                foreach($level3 as $placenodeA) {
+
+                    self::addWeightedEdge($placenodeA, $nodelevel4);
+                }
+            }
         }
 
 
@@ -237,6 +283,32 @@ class CustomGraph extends Graph
             $placesC = array_merge($places_multi['natural'], $places_multi['shopping']);
 
             foreach ($placesC as $places3) {
+
+                $nodelevel5 = self::createNode($graph, $places3);
+                $level5[] = $nodelevel5 ;
+
+                foreach($level4 as $placeBnode) {
+
+                    self::addWeightedEdge($placeBnode, $nodelevel5);
+
+                }
+            }
+
+        } elseif(key_exists('natural', $places_multi)) {
+            foreach ($places_multi['natural'] as $places3) {
+
+                $nodelevel5 = self::createNode($graph, $places3);
+                $level5[] = $nodelevel5 ;
+
+                foreach($level4 as $placeBnode) {
+
+                    self::addWeightedEdge($placeBnode, $nodelevel5);
+
+                }
+            }
+
+        } elseif(key_exists('shopping', $places_multi)) {
+            foreach ($places_multi['shopping'] as $places3) {
 
                 $nodelevel5 = self::createNode($graph, $places3);
                 $level5[] = $nodelevel5 ;
