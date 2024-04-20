@@ -72,7 +72,6 @@ class GenerateTripController extends Controller
         ->join('country', 'City.country', '=', 'country.country_name')
         ->select('City.name as name', "city.capital")
         ->where('country.country_name', '=', $Data['tocountry'])
-        ->where('City.name', '=', "florence")
         ->get()->toArray();
 
 
@@ -87,6 +86,10 @@ class GenerateTripController extends Controller
         $reminderdays = $numberOfDays % $N_cities;
 
         $city1NumberOfDays = $cityNumberOfDays + $reminderdays;
+        if($numberOfDays < $N_cities) {
+            $cityNumberOfDays = 1;
+            $city1NumberOfDays = 1;
+        }
         $days = 1;
         $cityindex = 0;
         $cities = array_keys($countrycities);
@@ -114,7 +117,7 @@ class GenerateTripController extends Controller
                 $places_day = Data::fetchData($preferedplaces, $Data, $destinationcityname, $travelmethod);        //get the data by places1; places1 is a nested array which include the prefered places for USER and the airport
 
                 $graph = new Graph();
-                $graph1 = CustomGraph::buildGraph($places_day, $graph, false, null);      // create A custom graph which contain the Possible paths for USER:
+                $graph1 = CustomGraph::buildGraph($places_day, $graph, false, null, $Data['PriceIsImportant']);      // create A custom graph which contain the Possible paths for USER:
                 $sourceNode = $graph1->getVertex(0);
 
                 //$graphviz = new GraphViz(['binary' => 'C:\Program Files\Graphviz\bin\dot.exe']);      // for display the created graph
@@ -130,7 +133,6 @@ class GenerateTripController extends Controller
 
             } else { //other days
                 $date = date("Y-m-d", strtotime($Data['date'] . ' +1 day'));
-
 
                 $travelmethod = null;
 
@@ -150,7 +152,7 @@ class GenerateTripController extends Controller
 
 
                     $graph = new Graph();
-                    $graph1 = CustomGraph::buildGraph($places_day, $graph, $changecity, $hotelAttributes);      // create A custom graph which contain the Possible paths for USER:
+                    $graph1 = CustomGraph::buildGraph($places_day, $graph, $changecity, $hotelAttributes, $Data['PriceIsImportant']);      // create A custom graph which contain the Possible paths for USER:
                     $sourceNode = $graph1->getVertex(0);
                     $sourcNodeType = $sourceNode->getAttribute('name');
 
@@ -193,7 +195,7 @@ class GenerateTripController extends Controller
             $response['numberOfPeople'] = $Data['N.people'];
 
             //$trip_days = ["day_" . $i];
-            $trip_day["day_" . $i]['dayId'] = $i;
+            $trip_days["day_" . $i]['dayId'] = $i;
             $trip_days["day_" . $i]['date'] = $date;
             $trip_days["day_" . $i]['city'] = $places_day['Currentcity'];
             $trip_days["day_" . $i]['neededMony'] = ceil($cost * $Data['N.people']) ;
@@ -202,7 +204,7 @@ class GenerateTripController extends Controller
             if($travelmethod == "plane") {
                 $response['flightReservation']["day_" . $i] = [ "airportId" => $places_day['Airport'][0]['id'] ,"fromCity" => $Data['fromcity'] ,
                 "airportName" => $places_day['Airport'][0]['name'],"address" => $places_day['Airport'][0]['address'],
-                "price" => ceil($ticketprice) ,"toatlAmountOfMony " => ceil($ticketprice * $Data['N.people']) ,"location" => $places_day['Airport'][0]['location']
+                "price" => ceil($ticketprice) ,"toatlAmountOfMony" => ceil($ticketprice * $Data['N.people']) ,"location" => $places_day['Airport'][0]['location']
                   ];
             }
 
@@ -240,9 +242,9 @@ class GenerateTripController extends Controller
 
             }
 
-            $trip_days["day_" . $i]['$dayPlaces'] = $dayPlaces;
+            $trip_days["day_" . $i]['dayPlaces'] = $dayPlaces;
 
-            $response['$trip_days'] = $trip_days ;
+            $response['tripDays'] = $trip_days ;
 
             foreach($path as $visitednodes) {
                 $visitednode = $graph1->getvertex($visitednodes);
@@ -261,6 +263,7 @@ class GenerateTripController extends Controller
             }
 
         }
+        $ticketprice = 0;
         $response['TotalCost'] = ceil($Totalcost) ;
         return $response;
     }

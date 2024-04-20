@@ -89,22 +89,22 @@ class CustomGraph extends Graph
 
 
 
-    public static function addWeightedEdge(Vertex $vertex1, Vertex $vertex2)   // A funcntion for add direct edge with weight
+    public static function addWeightedEdge(Vertex $vertex1, Vertex $vertex2, $price_is_important)   // A funcntion for add direct edge with weight
     {
         $distance = self::haversineDistance($vertex1, $vertex2);
 
         $price = $vertex2->getAttribute('price');
-
-        $weight = $distance + $price; // distance of destination node
-
+        if($price_is_important == true) {
+            $weight = $distance + $price; // distance of destination node
+        } else {
+            $weight = $distance;
+        }
         $edge = new Directed($vertex1, $vertex2);
 
         $edge->setWeight($weight);
         $edge->setAttribute('distance', $distance);
         $Method = self::travell_method($distance);
         $edge->setAttribute('travelMethod', $Method);
-
-
 
     }
 
@@ -114,6 +114,7 @@ class CustomGraph extends Graph
         Graph $graph,
         $changecity,
         $hotel,
+        $priceisimportant,
     ) {
         if (array_key_exists('Airport', $places_multi)) {
             $root = $places_multi['Airport'][0];
@@ -131,7 +132,7 @@ class CustomGraph extends Graph
 
                 $nodelevel1 =  self::createNode($graph, $hotel);
                 $Hotelslevel1[] = $nodelevel1;
-                self::addWeightedEdge($startnode1, $nodelevel1);
+                self::addWeightedEdge($startnode1, $nodelevel1, $priceisimportant);
 
 
 
@@ -150,7 +151,7 @@ class CustomGraph extends Graph
                 foreach($Hotelslevel1 as $Hotelsnode) {
 
 
-                    self::addWeightedEdge($Hotelsnode, $nodelevel2);
+                    self::addWeightedEdge($Hotelsnode, $nodelevel2, $priceisimportant);
 
                 }
 
@@ -158,13 +159,13 @@ class CustomGraph extends Graph
 
 
             if(!array_key_exists('Airport', $places_multi) && $changecity !== true) {
-                self::addWeightedEdge($startnode1, $nodelevel2);
+                self::addWeightedEdge($startnode1, $nodelevel2, $priceisimportant);
             }
 
         }
 
 
-        // create level3 (natural or shopping) or (old)
+        // create level3 (natural or shopping or old)
         $level3 = [];
 
         if (key_exists('natural', $places_multi) && key_exists('shopping', $places_multi)) {
@@ -177,7 +178,7 @@ class CustomGraph extends Graph
 
                 foreach($resturants_level1 as $resturantnode1) {
 
-                    self::addWeightedEdge($resturantnode1, $nodelevel3);
+                    self::addWeightedEdge($resturantnode1, $nodelevel3, $priceisimportant);
 
                 }
             }
@@ -190,7 +191,7 @@ class CustomGraph extends Graph
 
                 foreach($resturants_level1 as $resturantnode1) {
 
-                    self::addWeightedEdge($resturantnode1, $nodelevel3);
+                    self::addWeightedEdge($resturantnode1, $nodelevel3, $priceisimportant);
 
                 }
             }
@@ -202,7 +203,7 @@ class CustomGraph extends Graph
 
                 foreach($resturants_level1 as $resturantnode1) {
 
-                    self::addWeightedEdge($resturantnode1, $nodelevel3);
+                    self::addWeightedEdge($resturantnode1, $nodelevel3, $priceisimportant);
 
                 }
             }
@@ -214,13 +215,13 @@ class CustomGraph extends Graph
 
                 foreach($resturants_level1 as $resturantnode1) {
 
-                    self::addWeightedEdge($resturantnode1, $nodelevel3);
+                    self::addWeightedEdge($resturantnode1, $nodelevel3, $priceisimportant);
 
 
                 }
             }
         }
-        // create level4 (old) or  (natural or shopping)
+        // create level4 (old or natural or shopping)
         $level4 = [];
         if (key_exists('old', $places_multi)) {
             foreach ($places_multi['old'] as $oldplaces2 => $oldplace2) {
@@ -230,7 +231,7 @@ class CustomGraph extends Graph
 
                 foreach($level3 as $placenode4) {
 
-                    self::addWeightedEdge($placenode4, $nodelevel4);
+                    self::addWeightedEdge($placenode4, $nodelevel4, $priceisimportant);
 
 
                 }
@@ -245,7 +246,7 @@ class CustomGraph extends Graph
 
                 foreach($level3 as $placenodeA) {
 
-                    self::addWeightedEdge($placenodeA, $nodelevel4);
+                    self::addWeightedEdge($placenodeA, $nodelevel4, $priceisimportant);
 
                 }
             }
@@ -259,7 +260,7 @@ class CustomGraph extends Graph
 
                 foreach($level3 as $placenodeA) {
 
-                    self::addWeightedEdge($placenodeA, $nodelevel4);
+                    self::addWeightedEdge($placenodeA, $nodelevel4, $priceisimportant);
                 }
             }
         } elseif(key_exists('natural', $places_multi)) {
@@ -270,13 +271,13 @@ class CustomGraph extends Graph
 
                 foreach($level3 as $placenodeA) {
 
-                    self::addWeightedEdge($placenodeA, $nodelevel4);
+                    self::addWeightedEdge($placenodeA, $nodelevel4, $priceisimportant);
                 }
             }
         }
 
 
-        // create level5 (natural or shopping) or (old)
+        // create level5 (natural or shopping or old)
         $level5 = [];
 
         if (key_exists('natural', $places_multi) && key_exists('shopping', $places_multi)) {
@@ -289,7 +290,7 @@ class CustomGraph extends Graph
 
                 foreach($level4 as $placeBnode) {
 
-                    self::addWeightedEdge($placeBnode, $nodelevel5);
+                    self::addWeightedEdge($placeBnode, $nodelevel5, $priceisimportant);
 
                 }
             }
@@ -302,7 +303,7 @@ class CustomGraph extends Graph
 
                 foreach($level4 as $placeBnode) {
 
-                    self::addWeightedEdge($placeBnode, $nodelevel5);
+                    self::addWeightedEdge($placeBnode, $nodelevel5, $priceisimportant);
 
                 }
             }
@@ -315,7 +316,7 @@ class CustomGraph extends Graph
 
                 foreach($level4 as $placeBnode) {
 
-                    self::addWeightedEdge($placeBnode, $nodelevel5);
+                    self::addWeightedEdge($placeBnode, $nodelevel5, $priceisimportant);
 
                 }
             }
@@ -328,7 +329,7 @@ class CustomGraph extends Graph
 
                 foreach($level4 as $placeBnode) {
 
-                    self::addWeightedEdge($placeBnode, $nodelevel5);
+                    self::addWeightedEdge($placeBnode, $nodelevel5, $priceisimportant);
 
 
                 }
@@ -345,7 +346,7 @@ class CustomGraph extends Graph
 
                 foreach($level5 as $placeCnode) {
 
-                    self::addWeightedEdge($placeCnode, $nodelevel6);
+                    self::addWeightedEdge($placeCnode, $nodelevel6, $priceisimportant);
 
 
                 }
@@ -362,14 +363,14 @@ class CustomGraph extends Graph
             if (key_exists('night', $places_multi)) {
                 foreach($level6 as $nightnode) {
 
-                    self::addWeightedEdge($nightnode, $nodelevel7);
+                    self::addWeightedEdge($nightnode, $nodelevel7, $priceisimportant);
 
                 }
 
             } else {
                 foreach($level5 as $level5node) {
 
-                    self::addWeightedEdge($level5node, $nodelevel7);
+                    self::addWeightedEdge($level5node, $nodelevel7, $priceisimportant);
                 }
             }
         }
@@ -386,7 +387,7 @@ class CustomGraph extends Graph
 
         foreach($resturants_level2 as $resturants3) {
 
-            self::addWeightedEdge($resturants3, $endnode);
+            self::addWeightedEdge($resturants3, $endnode, $priceisimportant);
 
         }
 
