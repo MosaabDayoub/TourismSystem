@@ -81,7 +81,7 @@ class Data
 
 
 
-                case 'shoopingplaces':
+                case 'shoppingplaces':
 
                     //fetch shooping places
                     $shopping = DB::table('ShoopingPlace')
@@ -96,10 +96,10 @@ class Data
                     })->toArray();
 
                     foreach ($shopping as $key => $shop) {
-                        $shopping[$key]['placeType'] = "shooping"; // add type=>shop for each element in array shopping
+                        $shopping[$key]['placeType'] = "shopping"; // add type=>shop for each element in array shopping
                     }
 
-                    $places['shooping'] = $shopping; // storage shopping array in places array
+                    $places['shopping'] = $shopping; // storage shopping array in places array
 
 
                     break;

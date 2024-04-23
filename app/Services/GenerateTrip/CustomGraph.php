@@ -135,8 +135,8 @@ class CustomGraph extends Graph
 
         if(array_key_exists('Airport', $places_multi) || $changecity == true) {
             $Hotelslevel1 = [];
-            if(key_exists($Currentcityname, $placesofuser) && key_exists('Hotels', $placesofuser[$Currentcityname]) && key_exists(1, $placesofuser[$Currentcityname]['Hotels'])) {
-                $nodelevel1 = self::createNode($graph, $placesofuser[$Currentcityname]['Hotels'][1]);
+            if(key_exists($Currentcityname, $placesofuser) && key_exists('Hotels', $placesofuser[$Currentcityname]) && !empty($placesofuser[$Currentcityname]['Hotels'])) {
+                $nodelevel1 = self::createNode($graph, $placesofuser[$Currentcityname]['Hotels'][0]);
                 $Hotelslevel1[] = $nodelevel1 ;
 
             } else {
@@ -209,7 +209,7 @@ class CustomGraph extends Graph
 
             if (key_exists('natural', $places_multi)) {
 
-                foreach ($places_multi['natural'] as $places) {
+                foreach ($places_multi['natural'] as $naturalplaces2 => $places) {
 
                     $nodelevel3 = self::createNode($graph, $places);
                     $level3[] = $nodelevel3 ;
@@ -267,22 +267,22 @@ class CustomGraph extends Graph
 
         // create level5 (shooping)
         $level5 = [];
-        if(key_exists($Currentcityname, $placesofuser) && key_exists('shooping', $placesofuser[$Currentcityname]) && key_exists($dayofcity, $placesofuser[$Currentcityname]['shooping'])) {
-            $nodelevel5 = self::createNode($graph, $placesofuser[$Currentcityname]['shooping'][$dayofcity]);
+        if(key_exists($Currentcityname, $placesofuser) && key_exists('shopping', $placesofuser[$Currentcityname]) && key_exists($dayofcity, $placesofuser[$Currentcityname]['shopping'])) {
+            $nodelevel5 = self::createNode($graph, $placesofuser[$Currentcityname]['shopping'][$dayofcity]);
             $level5[] = $nodelevel5 ;
             $level5exist = true;
 
         } else {
 
-            if (key_exists('shooping', $places_multi)) {
-                foreach ($places_multi['shooping'] as $shoopingplaces) {
+            if (key_exists('shopping', $places_multi)) {
+                foreach ($places_multi['shopping'] as $shoopingplaces) {
                     $nodeslevel5 = self::createNode($graph, $shoopingplaces);
                     $level5[] = $nodeslevel5;
                 }
             }
 
         }
-        if(key_exists('shooping', $places_multi) || $level5exist == true) {
+        if(key_exists('shopping', $places_multi) || $level5exist == true) {
 
             foreach ($level5 as $place5) {
 
@@ -332,7 +332,7 @@ class CustomGraph extends Graph
         if (key_exists('night', $places_multi) || $level6exist == true) {
             foreach ($level6 as $place6) {
 
-                if(key_exists('shooping', $places_multi)) {
+                if(key_exists('shopping', $places_multi)) {
                     foreach($level5 as $placenode) {
 
                         self::addWeightedEdge($placenode, $place6, $priceisimportant);

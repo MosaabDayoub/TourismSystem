@@ -49,8 +49,7 @@ class GenerateTripController extends Controller
         $preferedplaces = $Data['preferedplaces'];
         $preferedfood = $Data['preferedfood'];
         $PriceIsImportant = $Data['PriceIsImportant'];
-        // $i = 1;
-        // return $Data['places']['roma']['night'][$i];
+
         // fetch cities of the desination country
         $countrycitiesQuery = DB::table('City')
         ->join('country', 'City.country', '=', 'country.country_name')
@@ -105,9 +104,8 @@ class GenerateTripController extends Controller
                 $graph = new Graph();
                 $graph1 = CustomGraph::buildGraph($places_day, $graph, false, null, $Data['PriceIsImportant'], $Cityday, $Data['places'], $resturantofday);      // create A custom graph which contain the Possible paths for USER:
                 $sourceNode = $graph1->getVertex(0);
-
-                //$graphviz = new GraphViz(['binary' => 'C:\Program Files\Graphviz\bin\dot.exe']);      // for display the created graph
-                //$graphviz->display($graph1);
+                // $graphviz = new GraphViz(['binary' => 'C:\Program Files\Graphviz\bin\dot.exe']);      // for display the created graph
+                // $graphviz->display($graph1);
 
                 list($distances, $previous, $paths) = DijkstraAlgorithm::allShortestPaths($graph1, $sourceNode);     // execute Dijkstra Algorithm on the created graph
                 $path = end($paths);
@@ -315,7 +313,7 @@ class GenerateTripController extends Controller
 
                             break;
 
-                        case "shooping":
+                        case "shopping":
 
                             DB::table('dayplaces')->insert(
                                 ['day_id' => $dayid,
