@@ -80,6 +80,7 @@ class GenerateTripController extends Controller
         $ticketprice = 0;
         $Totalcost = 0;
         $resturantofday = 0;
+        $Cityday = 0;
         $visited = [];
         $response = [];       // response Array Initialization
 
@@ -88,7 +89,6 @@ class GenerateTripController extends Controller
             $travelmethod = null;
 
             if ($i == 1) {        // Day1
-                $Cityday = 0;
                 $date = $Data['date'] ;
                 $destinationcityname = array_search(1, $countrycities);            // find the capital
 
@@ -139,7 +139,7 @@ class GenerateTripController extends Controller
 
                 if(($i % $city1NumberOfDays == 1) || (($days % $cityNumberOfDays == 0 && $days != 0) && $i > $city1NumberOfDays)) { // check if we have to change city
                     $Cityday = 0;
-                    $resturantofday += 2;
+                    $resturantofday = 0;
                     $changecity = true;
                     $sourcecityQuery = DB::table('City')->select('*')->where('name', $City_name)->first();     // fetch the source city information from database
                     $sourcecity = get_object_vars($sourcecityQuery);  // to convert stdclass object to array
