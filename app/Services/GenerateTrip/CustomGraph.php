@@ -120,6 +120,9 @@ class CustomGraph extends Graph
         $Resturantofday
     ) {
         $Currentcityname = $places_multi['Currentcity']['name'];
+        $level4exist = false;
+        $level5exist = false;
+        $level6exist = false;
         if (array_key_exists('Airport', $places_multi)) {
             $root = $places_multi['Airport'][0];
         } else {
