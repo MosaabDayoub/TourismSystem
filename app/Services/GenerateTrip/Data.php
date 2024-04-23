@@ -11,18 +11,18 @@ class Data
     public static function fetchData(array $preferred, array $data, $cityname, $travelmethod)    // A funcyion for fetch Data from DB depending on user preferences
     {
         //find the airport of this capital
-        if($travelmethod == "plane") {
+        if($travelmethod === "plane") {
             $Airport = DB::table('City')
 
             ->join('airport', 'City.city_id', '=', 'airport.city_id')
             ->select('airport.*')
             ->where('city.name', '=', $cityname)
+
             ->get()
             ->map(function ($item) {
                 return (array) $item;
             })->toArray();
 
-            //$Airport = self::format($AirportQuery);
             $Airport[0]['placeType'] = "Airport";
             $places['Airport'] = $Airport;           // storage Airport of the capital array in places array
         }
@@ -42,13 +42,11 @@ class Data
                     ->join('City', 'naturalplace.city_id', '=', 'City.city_id')
                     ->select('naturalplace.*')
                     ->where('city.name', '=', $cityname)
-                    //->where('id', '<', 3)
+                   // ->where('id', '<', 8)
                     ->get()
                     ->map(function ($item) {
                         return (array) $item;
                     })->toArray();
-
-                    //$naturalplaces = self::format($naturalplacesQuery);
 
                     foreach ($naturalplaces as $key => $natural) {
                         $naturalplaces[$key]['placeType'] = "natural"; // add type => natural for each element in array $naturalplaces
@@ -59,7 +57,6 @@ class Data
                     break;
 
 
-
                 case 'oldplaces':
 
                     //fetch old places
@@ -67,13 +64,12 @@ class Data
                     ->join('City', 'oldplace.city_id', '=', 'City.city_id')
                     ->select('oldplace.*')
                     ->where('city.name', '=', $cityname)
-                    //->where('id', '<', 3)
+                    //->where('id', '<', 8)
                     ->get()
                     ->map(function ($item) {
                         return (array) $item;
                     })->toArray();
 
-                    //$oldplaces = self::format($oldplacesQuery);
                     foreach ($oldplaces as $key => $old) {
                         $oldplaces[$key]['placeType'] = "old"; // add type=>old for each element in array shopping
                     }
@@ -85,25 +81,25 @@ class Data
 
 
 
-                case 'shoppingplaces':
+                case 'shoopingplaces':
 
-                    //fetch shopping places
+                    //fetch shooping places
                     $shopping = DB::table('ShoopingPlace')
 
                     ->join('City', 'ShoopingPlace.city_id', '=', 'City.city_id')
                     ->select('ShoopingPlace.*')
                     ->where('city.name', '=', $cityname)
-                    //->where('id', '<', 3)
+                    //->where('id', '<', 8)
                     ->get()
                     ->map(function ($item) {
                         return (array) $item;
                     })->toArray();
-                    //$shopping = self::format($shoppingplacesQuery);
+
                     foreach ($shopping as $key => $shop) {
-                        $shopping[$key]['placeType'] = "shop"; // add type=>shop for each element in array shopping
+                        $shopping[$key]['placeType'] = "shooping"; // add type=>shop for each element in array shopping
                     }
 
-                    $places['shopping'] = $shopping; // storage shopping array in places array
+                    $places['shooping'] = $shopping; // storage shopping array in places array
 
 
                     break;
@@ -118,13 +114,12 @@ class Data
                     ->join('City', 'nightplace.city_id', '=', 'City.city_id')
                     ->select('nightplace.*')
                     ->where('city.name', '=', $cityname)
-                    //->where('id', '<', 3)
+                   // ->where('id', '<', 10)
                     ->get()
                     ->map(function ($item) {
                         return (array) $item;
                     })->toArray();
 
-                    //$nightplaces = self::format($nightplacesQuery);
                     foreach ($nightplaces as $key => $night) {
                         $nightplaces[$key]['placeType'] = "night"; // add type => shop for each element in array shopping
                     }
@@ -146,13 +141,13 @@ class Data
             ->join('City', 'resturant.city_id', '=', 'City.city_id')
             ->select('resturant.*')
             ->where('City.name', '=', $cityname)
+           // ->where('id', '<', 3)
             ->wherein('food_type', $prefernce_food)
             ->get()
             ->map(function ($item) {
                 return (array) $item;
             })->toArray();
 
-            //$Resturants = self::format($ResturantsQuery);
             foreach ($Resturants as $key => $Resturant) {
                 $Resturants[$key]['placeType'] = "Resturant";     // add type => resturant for each element in array shopping
             }
@@ -161,7 +156,6 @@ class Data
 
         }
 
-
         //fetch Hotels
 
         $Hotels = DB::table('hotel')
@@ -169,13 +163,12 @@ class Data
         ->join('City', 'hotel.city_id', '=', 'City.city_id')
         ->select('hotel.*')
         ->where('city.name', '=', $cityname)
-        //->where('id', '<', 5)
+       // ->where('id', '<', 8)
         ->get()
         ->map(function ($item) {
             return (array) $item;
         })->toArray();
 
-        //$Hotels = self::format($HotelsQuery);
         foreach ($Hotels as $key => $Hotel) {
             $Hotels[$key]['placeType'] = "Hotel";    // add type => Hotel for each element in array shopping
         }
@@ -189,7 +182,6 @@ class Data
         $currentcity = get_object_vars($currentcityQuery);  // to convert stdclass object to array
 
         $places['Currentcity'] = $currentcity;       // storege currentcity array in places array
-
 
 
         return $places;  // $places is array of array contain kay type -> value :array of places

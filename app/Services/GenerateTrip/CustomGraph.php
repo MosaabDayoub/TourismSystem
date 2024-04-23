@@ -115,7 +115,11 @@ class CustomGraph extends Graph
         $changecity,
         $hotel,
         $priceisimportant,
+        $dayofcity,
+        $placesofuser,
+        $Resturantofday
     ) {
+        $Currentcityname = $places_multi['Currentcity']['name'];
         if (array_key_exists('Airport', $places_multi)) {
             $root = $places_multi['Airport'][0];
         } else {
@@ -125,27 +129,29 @@ class CustomGraph extends Graph
         $startnode1 = self::createNode($graph, $root);  // create start node
 
         // create level1 (for hotels) if start node is the airport (on the first day)
+
         if(array_key_exists('Airport', $places_multi) || $changecity == true) {
             $Hotelslevel1 = [];
-            foreach ($places_multi['Hotels'] as $hotels => $hotel) {
+            if(key_exists($Currentcityname, $placesofuser) && key_exists('Hotels', $placesofuser[$Currentcityname]) && key_exists(1, $placesofuser[$Currentcityname]['Hotels'])) {
+                $nodelevel1 = self::createNode($graph, $placesofuser[$Currentcityname]['Hotels'][1]);
+                $Hotelslevel1[] = $nodelevel1 ;
 
-
-                $nodelevel1 =  self::createNode($graph, $hotel);
-                $Hotelslevel1[] = $nodelevel1;
-                self::addWeightedEdge($startnode1, $nodelevel1, $priceisimportant);
-
-
-
+            } else {
+                foreach ($places_multi['Hotels'] as $hotels => $hotel) {
+                    $nodelevel1 =  self::createNode($graph, $hotel);
+                    $Hotelslevel1[] = $nodelevel1;
+                }
+            }
+            foreach($Hotelslevel1 as $hotel) {
+                self::addWeightedEdge($startnode1, $hotel, $priceisimportant);
             }
         }
 
 
         // create level2 or level1 if start node isn't Airport (for resturants)
         $resturants_level1 = [];
-        foreach ($places_multi['Resturants'] as $Resturants => $Resturant) {
-
-
-            $nodelevel2 = self::createNode($graph, $Resturant);
+        if(key_exists($Currentcityname, $placesofuser) && key_exists('Resturants', $placesofuser[$Currentcityname]) && key_exists($Resturantofday, $placesofuser[$Currentcityname]['Resturants'])) {
+            $nodelevel2 = self::createNode($graph, $placesofuser[$Currentcityname]['Resturants'][$Resturantofday]);
             $resturants_level1[] = $nodelevel2;
             if(array_key_exists('Airport', $places_multi) || $changecity == true) {
                 foreach($Hotelslevel1 as $Hotelsnode) {
@@ -157,220 +163,251 @@ class CustomGraph extends Graph
 
             }
 
-
             if(!array_key_exists('Airport', $places_multi) && $changecity !== true) {
                 self::addWeightedEdge($startnode1, $nodelevel2, $priceisimportant);
             }
 
+        } else {
+
+            foreach ($places_multi['Resturants'] as $Resturants => $Resturant) {
+
+
+                $nodelevel2 = self::createNode($graph, $Resturant);
+                $resturants_level1[] = $nodelevel2;
+                if(array_key_exists('Airport', $places_multi) || $changecity == true) {
+                    foreach($Hotelslevel1 as $Hotelsnode) {
+
+
+                        self::addWeightedEdge($Hotelsnode, $nodelevel2, $priceisimportant);
+
+                    }
+
+                }
+
+                if(!array_key_exists('Airport', $places_multi) && $changecity !== true) {
+                    self::addWeightedEdge($startnode1, $nodelevel2, $priceisimportant);
+                }
+
+            }
+
         }
-
-
-        // create level3 (natural or shopping or old)
+        // create level3 (natural)
         $level3 = [];
+        if(key_exists($Currentcityname, $placesofuser) && key_exists('natural', $placesofuser[$Currentcityname]) && key_exists($dayofcity, $placesofuser[$Currentcityname]['natural'])) {
+            $nodelevel3 = self::createNode($graph, $placesofuser[$Currentcityname]['natural'][$dayofcity]);
+            $level3[] = $nodelevel3 ;
+            foreach($resturants_level1 as $resturantnode1) {
 
-        if (key_exists('natural', $places_multi) && key_exists('shopping', $places_multi)) {
-            $placesA = array_merge($places_multi['natural'], $places_multi['shopping']);
+                self::addWeightedEdge($resturantnode1, $nodelevel3, $priceisimportant);
 
-            foreach ($placesA as $places) {
-
-                $nodelevel3 = self::createNode($graph, $places);
-                $level3[] = $nodelevel3 ;
-
-                foreach($resturants_level1 as $resturantnode1) {
-
-                    self::addWeightedEdge($resturantnode1, $nodelevel3, $priceisimportant);
-
-                }
             }
 
-        } elseif(key_exists('natural', $places_multi)) {
-            foreach ($places_multi['natural'] as $places) {
-
-                $nodelevel3 = self::createNode($graph, $places);
-                $level3[] = $nodelevel3 ;
-
-                foreach($resturants_level1 as $resturantnode1) {
-
-                    self::addWeightedEdge($resturantnode1, $nodelevel3, $priceisimportant);
-
-                }
-            }
-        } elseif(key_exists('shopping', $places_multi)) {
-            foreach ($places_multi['shopping'] as $places) {
-
-                $nodelevel3 = self::createNode($graph, $places);
-                $level3[] = $nodelevel3 ;
-
-                foreach($resturants_level1 as $resturantnode1) {
-
-                    self::addWeightedEdge($resturantnode1, $nodelevel3, $priceisimportant);
-
-                }
-            }
         } else {
-            foreach ($places_multi['old'] as $oldplaces => $oldplace) {
 
-                $nodelevel3 = self::createNode($graph, $oldplace);
-                $level3[] = $nodelevel3;
+            if (key_exists('natural', $places_multi)) {
 
-                foreach($resturants_level1 as $resturantnode1) {
+                foreach ($places_multi['natural'] as $places) {
 
-                    self::addWeightedEdge($resturantnode1, $nodelevel3, $priceisimportant);
+                    $nodelevel3 = self::createNode($graph, $places);
+                    $level3[] = $nodelevel3 ;
 
 
+
+                    foreach($resturants_level1 as $resturantnode1) {
+
+                        self::addWeightedEdge($resturantnode1, $nodelevel3, $priceisimportant);
+
+                    }
                 }
+
             }
         }
-        // create level4 (old or natural or shopping)
+
+        // create level4 (old)
         $level4 = [];
-        if (key_exists('old', $places_multi)) {
-            foreach ($places_multi['old'] as $oldplaces2 => $oldplace2) {
-
-                $nodelevel4 = self::createNode($graph, $oldplace2);
-                $level4[] = $nodelevel4;
-
-                foreach($level3 as $placenode4) {
-
-                    self::addWeightedEdge($placenode4, $nodelevel4, $priceisimportant);
-
-
-                }
-            }
-        } elseif(key_exists('natural', $places_multi) && key_exists('shopping', $places_multi)) {
-            $placesB = array_merge($places_multi['natural'], $places_multi['shopping']);
-
-            foreach ($placesB as $places2) {
-
-                $nodelevel4 = self::createNode($graph, $places2);
-                $level4[] = $nodelevel4 ;
-
-                foreach($level3 as $placenodeA) {
-
-                    self::addWeightedEdge($placenodeA, $nodelevel4, $priceisimportant);
-
-                }
-            }
-
-
-        } elseif(key_exists('shopping', $places_multi)) {
-            foreach ($places_multi['shopping'] as $places2) {
-
-                $nodelevel4 = self::createNode($graph, $places2);
-                $level4[] = $nodelevel4 ;
-
-                foreach($level3 as $placenodeA) {
-
-                    self::addWeightedEdge($placenodeA, $nodelevel4, $priceisimportant);
-                }
-            }
-        } elseif(key_exists('natural', $places_multi)) {
-            foreach ($places_multi['natural'] as $places2) {
-
-                $nodelevel4 = self::createNode($graph, $places2);
-                $level4[] = $nodelevel4 ;
-
-                foreach($level3 as $placenodeA) {
-
-                    self::addWeightedEdge($placenodeA, $nodelevel4, $priceisimportant);
-                }
-            }
-        }
-
-
-        // create level5 (natural or shopping or old)
-        $level5 = [];
-
-        if (key_exists('natural', $places_multi) && key_exists('shopping', $places_multi)) {
-            $placesC = array_merge($places_multi['natural'], $places_multi['shopping']);
-
-            foreach ($placesC as $places3) {
-
-                $nodelevel5 = self::createNode($graph, $places3);
-                $level5[] = $nodelevel5 ;
-
-                foreach($level4 as $placeBnode) {
-
-                    self::addWeightedEdge($placeBnode, $nodelevel5, $priceisimportant);
-
-                }
-            }
-
-        } elseif(key_exists('natural', $places_multi)) {
-            foreach ($places_multi['natural'] as $places3) {
-
-                $nodelevel5 = self::createNode($graph, $places3);
-                $level5[] = $nodelevel5 ;
-
-                foreach($level4 as $placeBnode) {
-
-                    self::addWeightedEdge($placeBnode, $nodelevel5, $priceisimportant);
-
-                }
-            }
-
-        } elseif(key_exists('shopping', $places_multi)) {
-            foreach ($places_multi['shopping'] as $places3) {
-
-                $nodelevel5 = self::createNode($graph, $places3);
-                $level5[] = $nodelevel5 ;
-
-                foreach($level4 as $placeBnode) {
-
-                    self::addWeightedEdge($placeBnode, $nodelevel5, $priceisimportant);
-
-                }
-            }
+        if(key_exists($Currentcityname, $placesofuser) && key_exists('old', $placesofuser[$Currentcityname]) && key_exists($dayofcity, $placesofuser[$Currentcityname]['old'])) {
+            $nodelevel4 = self::createNode($graph, $placesofuser[$Currentcityname]['old'][$dayofcity]);
+            $level4[] = $nodelevel4 ;
+            $level4exist = true;
 
         } else {
-            foreach ($places_multi['old'] as $oldplaces3 => $oldplace3) {
+            if (key_exists('old', $places_multi)) {
+                foreach ($places_multi['old'] as $oldplaces2 => $oldplace2) {
+                    $nodeslevel4 = self::createNode($graph, $oldplace2);
+                    $level4[] = $nodeslevel4;
+                }
+            }
+        }
+        if (key_exists('old', $places_multi) || $level4exist == true) {
+            foreach ($level4 as $nodelevel4) {
 
-                $nodelevel5 = self::createNode($graph, $oldplace3);
-                $level5[] = $nodelevel5;
 
-                foreach($level4 as $placeBnode) {
+                if(key_exists('natural', $places_multi)) {
+                    foreach($level3 as $placenode) {
 
-                    self::addWeightedEdge($placeBnode, $nodelevel5, $priceisimportant);
+                        self::addWeightedEdge($placenode, $nodelevel4, $priceisimportant);
 
 
+                    }
+                } else {
+                    foreach($resturants_level1 as $placenode) {
+
+                        self::addWeightedEdge($placenode, $nodelevel4, $priceisimportant);
+
+
+                    }
+                }
+
+            }
+        }
+
+
+        // create level5 (shooping)
+        $level5 = [];
+        if(key_exists($Currentcityname, $placesofuser) && key_exists('shooping', $placesofuser[$Currentcityname]) && key_exists($dayofcity, $placesofuser[$Currentcityname]['shooping'])) {
+            $nodelevel5 = self::createNode($graph, $placesofuser[$Currentcityname]['shooping'][$dayofcity]);
+            $level5[] = $nodelevel5 ;
+            $level5exist = true;
+
+        } else {
+
+            if (key_exists('shooping', $places_multi)) {
+                foreach ($places_multi['shooping'] as $shoopingplaces) {
+                    $nodeslevel5 = self::createNode($graph, $shoopingplaces);
+                    $level5[] = $nodeslevel5;
                 }
             }
 
         }
+        if(key_exists('shooping', $places_multi) || $level5exist == true) {
+
+            foreach ($level5 as $place5) {
+
+                if(key_exists('old', $places_multi)) {
+                    foreach($level4 as $placenode) {
+
+                        self::addWeightedEdge($placenode, $place5, $priceisimportant);
+
+
+                    }
+                } elseif(key_exists('natural', $places_multi)) {
+                    foreach($level3 as $placenode) {
+
+                        self::addWeightedEdge($placenode, $place5, $priceisimportant);
+
+
+                    }
+                } else {
+                    foreach($resturants_level1 as $placenode) {
+
+                        self::addWeightedEdge($placenode, $place5, $priceisimportant);
+
+                    }
+                }
+            }
+
+        }
+
         //create level6 nightplace
-        if (key_exists('night', $places_multi)) {
-            $level6 = [];
-            foreach ($places_multi['night'] as $nightplaces => $nightplace) {
+        $level6 = [];
+        if(key_exists($Currentcityname, $placesofuser) && key_exists('night', $placesofuser[$Currentcityname]) && key_exists($dayofcity, $placesofuser[$Currentcityname]['night'])) {
+            $nodelevel6 = self::createNode($graph, $placesofuser[$Currentcityname]['night'][$dayofcity]);
+            $level6[] = $nodelevel6 ;
+            $level6exist = true;
 
-                $nodelevel6 = self::createNode($graph, $nightplace);
-                $level6[] = $nodelevel6;
+        } else {
 
-                foreach($level5 as $placeCnode) {
+            if (key_exists('night', $places_multi)) {
+                foreach ($places_multi['night'] as $nightplaces) {
+                    $nodeslevel6 = self::createNode($graph, $nightplaces);
+                    $level6[] = $nodeslevel6;
+                }
+            }
 
-                    self::addWeightedEdge($placeCnode, $nodelevel6, $priceisimportant);
+        }
+
+        if (key_exists('night', $places_multi) || $level6exist == true) {
+            foreach ($level6 as $place6) {
+
+                if(key_exists('shooping', $places_multi)) {
+                    foreach($level5 as $placenode) {
+
+                        self::addWeightedEdge($placenode, $place6, $priceisimportant);
 
 
+                    }
+                } elseif(key_exists('old', $places_multi)) {
+                    foreach($level4 as $placenode) {
+
+                        self::addWeightedEdge($placenode, $place6, $priceisimportant);
+
+
+                    }
+                } elseif(key_exists('natural', $places_multi)) {
+                    foreach($level3 as $placenode) {
+
+                        self::addWeightedEdge($placenode, $place6, $priceisimportant);
+
+                    }
+                } else {
+                    foreach($resturants_level1 as $placenode) {
+
+                        self::addWeightedEdge($placenode, $place6, $priceisimportant);
+
+                    }
                 }
             }
         }
 
         // create level7 (for resturants)
         $resturants_level2 = [];
-        foreach ($places_multi['Resturants'] as $Resturants2 => $Resturant2) {
+        if(key_exists($Currentcityname, $placesofuser) && key_exists('Resturants', $placesofuser[$Currentcityname]) && key_exists($Resturantofday + 1, $placesofuser[$Currentcityname]['Resturants'])) {
+            $nodelevel7 = self::createNode($graph, $placesofuser[$Currentcityname]['Resturants'][$Resturantofday + 1]);
+            $resturants_level2[] = $nodelevel7 ;
+            $level7exist = true;
 
+        } else {
 
-            $nodelevel7 = self::createNode($graph, $Resturant2);
-            $resturants_level2[] = $nodelevel7;
+            foreach ($places_multi['Resturants'] as $Resturants2) {
+                $nodelevel7 = self::createNode($graph, $Resturants2);
+                $resturants_level2[] = $nodelevel7;
+            }
+        }
+
+        foreach ($resturants_level2 as $Resturant2) {
+
             if (key_exists('night', $places_multi)) {
                 foreach($level6 as $nightnode) {
 
-                    self::addWeightedEdge($nightnode, $nodelevel7, $priceisimportant);
+                    self::addWeightedEdge($nightnode, $Resturant2, $priceisimportant);
 
                 }
 
-            } else {
-                foreach($level5 as $level5node) {
+            } elseif(key_exists('shopping', $places_multi)) {
+                foreach($level5 as $placenode) {
 
-                    self::addWeightedEdge($level5node, $nodelevel7, $priceisimportant);
+                    self::addWeightedEdge($placenode, $Resturant2, $priceisimportant);
+
+
+                }
+            } elseif(key_exists('old', $places_multi)) {
+                foreach($level4 as $placenode) {
+
+                    self::addWeightedEdge($placenode, $Resturant2, $priceisimportant);
+
+
+                }
+            } elseif(key_exists('natural', $places_multi)) {
+                foreach($level3 as $placenode) {
+
+                    self::addWeightedEdge($placenode, $Resturant2, $priceisimportant);
+
+                }
+            } else {
+                foreach($resturants_level1 as $placenode) {
+
+                    self::addWeightedEdge($placenode, $Resturant2, $priceisimportant);
+
                 }
             }
         }

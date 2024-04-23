@@ -40,10 +40,6 @@ class DijkstraAlgorithm
             foreach ($minVertex->getEdges() as $edge) {
                 $neighbor = $edge->getVertexEnd();
 
-                if ($neighbor === $minVertex) {
-                    continue; // Ignore the way back
-                }
-
                 $alt = $distances[$minVertexId] + $edge->getWeight();
                 if ($alt < $distances[$neighbor->getId()]) {
                     $distances[$neighbor->getId()] = $alt;
@@ -52,10 +48,7 @@ class DijkstraAlgorithm
                     $nodeQueue->insert($neighbor, $alt);
                 }
             }
-
         }
-
-
 
 
         // return the shortst paths
