@@ -155,7 +155,7 @@ class Data
             $places['Resturants'] = $Resturants;     // storage Resturants array in places array
 
         }
-       
+
         //fetch Hotels
 
         $Hotels = DB::table('hotel')

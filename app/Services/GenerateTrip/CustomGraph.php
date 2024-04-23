@@ -286,7 +286,7 @@ class CustomGraph extends Graph
 
             foreach ($level5 as $place5) {
 
-                if(key_exists('old', $places_multi)) {
+                if(key_exists('old', $places_multi) || $level4exist == true) {
                     foreach($level4 as $placenode) {
 
                         self::addWeightedEdge($placenode, $place5, $priceisimportant);
@@ -332,14 +332,14 @@ class CustomGraph extends Graph
         if (key_exists('night', $places_multi) || $level6exist == true) {
             foreach ($level6 as $place6) {
 
-                if(key_exists('shopping', $places_multi)) {
+                if(key_exists('shopping', $places_multi) || $level5exist == true) {
                     foreach($level5 as $placenode) {
 
                         self::addWeightedEdge($placenode, $place6, $priceisimportant);
 
 
                     }
-                } elseif(key_exists('old', $places_multi)) {
+                } elseif(key_exists('old', $places_multi) || $level4exist == true) {
                     foreach($level4 as $placenode) {
 
                         self::addWeightedEdge($placenode, $place6, $priceisimportant);
@@ -379,21 +379,21 @@ class CustomGraph extends Graph
 
         foreach ($resturants_level2 as $Resturant2) {
 
-            if (key_exists('night', $places_multi)) {
+            if (key_exists('night', $places_multi) || $level6exist == true) {
                 foreach($level6 as $nightnode) {
 
                     self::addWeightedEdge($nightnode, $Resturant2, $priceisimportant);
 
                 }
 
-            } elseif(key_exists('shopping', $places_multi)) {
+            } elseif(key_exists('shopping', $places_multi) || $level5exist == true) {
                 foreach($level5 as $placenode) {
 
                     self::addWeightedEdge($placenode, $Resturant2, $priceisimportant);
 
 
                 }
-            } elseif(key_exists('old', $places_multi)) {
+            } elseif(key_exists('old', $places_multi) || $level4exist == true) {
                 foreach($level4 as $placenode) {
 
                     self::addWeightedEdge($placenode, $Resturant2, $priceisimportant);
