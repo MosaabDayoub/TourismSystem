@@ -51,11 +51,12 @@ class DataImport
         return $costs;
     }
 
-    public static function importData(array $preferred, array $data, $cityname, $travelmethod, $budgetofday, $N_person, $visitedplaces, $placesofuser)    // A funcyion for fetch Data from DB depending on user preferences
+    public static function importData(array $preferred, array $data, $cityname, $travelmethod, $budgetofday, $N_person, $visitedplaces, $placesofuser, $k)    // A funcyion for fetch Data from DB depending on user preferences
     {
         $i = 0;
         $budgetofday -= 70;
         $budgetofday = $budgetofday / $N_person;
+
         $preferred[] = "resturant";
         $preferred[] = "hotel";
         $place_costs = self::calculatePlaceCosts($budgetofday, $preferred, $N_person);
@@ -126,6 +127,7 @@ class DataImport
                     ->select("{$placeType}place.*", DB::raw("ABS({$placeType}place.price - {$place_costs[$placeType ]}) AS price_difference"))
                     ->get();
 
+
                     // Find the smallest price difference based on the collected records
                     $closestPriceDifference = $SelectedPlacesWithDifferences->min('price_difference');
 
@@ -159,12 +161,17 @@ class DataImport
             $place_costs = self::calculatePlaceCosts($budgetofday, $preferred, $N_person);
 
         }
-        if (isset($data['preferedfood'])) {
-            $preference_food = array_keys($data['preferedfood'], true);
-        }
+
         //fetch resturants
         for ($i = 1 ; $i <= 2 ;$i++) {
             ${"Resturants" . $i} = [];
+            if (isset($data['preferedfood'])) {
+                $preference_food = array_keys($data['preferedfood'], true);
+            }
+
+            /*    if($k == 2 && $i == 1) {
+                    return $preference_food;
+                }*/
             if (count($preference_food) > 1) {
                 $halfwayPoint = ceil(count($preference_food) / 2);
                 $firstHalf = array_slice($preference_food, 0, $halfwayPoint);
@@ -198,13 +205,14 @@ class DataImport
                     })->toArray();
 
                 }
-            }
-            if(!empty(${"Resturants" . $i})) {
-                $visitedtype = ${"Resturants" . $i}[0]['food_type'];
+                if(!empty(${"Resturants" . $i})) {
+                    $visitedtype = ${"Resturants" . $i}[0]['food_type'];
 
-                if(($key = array_search($visitedtype, $preference_food)) !== false && count($preference_food) > 1) {
-                    unset($preference_food[$key]);
+                    if(($key = array_search($visitedtype, $preference_food)) !== false && count($preference_food) > 1) {
+                        unset($preference_food[$key]);
+                    }
                 }
+
             } else {
                 // Collect restaurants and get the smallest difference in price
                 $restaurantsWithDifferences = DB::table('resturant')
@@ -214,6 +222,7 @@ class DataImport
                     ->where('City.name', '=', $cityname)
                     ->select('resturant.*', DB::raw("ABS(resturant.price - {$place_costs['resturant']})  as price_difference"))
                     ->get();
+
 
                 // // Find the smallest price difference based on the collected records
                 $closestPriceDifference = $restaurantsWithDifferences->min('price_difference');
@@ -237,6 +246,7 @@ class DataImport
             }
 
             $places['Resturants'.$i] = ${"Resturants" . $i};     // storage Resturants array in places array
+
             $budgetofday -= $places['Resturants'.$i][0]['price'];
 
         }

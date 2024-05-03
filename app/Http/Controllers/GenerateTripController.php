@@ -34,13 +34,17 @@ class GenerateTripController extends Controller
 
     public static function selectRandomTypes($userplaces, $Rest, $economicsituation)              // A function for performs random selection and ensures diversity
     {
+        if($economicsituation == "green") {
+            $number_of_choices = count($userplaces) ;
+        }
+        if($economicsituation == "orange") {
+            $number_of_choices = count($userplaces) - 1;
+        }
 
-        $number_of_choices = count($userplaces) - 1;
-
-        /*    if ($Rest && in_array("night", $userplaces) && count($userplaces) > 2) {
-                $userplaces = array_diff($userplaces, array("night"));
-                $userplaces = array_values($userplaces);
-            }*/
+        /*   if ($Rest && in_array("night", $userplaces) && count($userplaces) > 2) {
+               $userplaces = array_diff($userplaces, array("night"));
+               $userplaces = array_values($userplaces);
+           }*/
         if($economicsituation == "red" ||  count($userplaces) < 3) {
             $number_of_choices = 2;
         }
@@ -232,8 +236,9 @@ class GenerateTripController extends Controller
                     $rest = true;
                 }
                 $custompreferedplaces = self::selectRandomTypes($preferedplaces, $rest, $EconomicSituation, );
-                $places_day = DataImport::importData($custompreferedplaces, $Data, $destinationcityname, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces);        //get the data by places1; places1 is a nested array which include the prefered places for USER and the airport
+                $places_day = DataImport::importData($custompreferedplaces, $Data, $destinationcityname, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces, $i);        //get the data by places1; places1 is a nested array which include the prefered places for USER and the airport
                 //return $places_day;
+
                 $graph = new Graph();
                 $graph1 = CustomGraph::buildGraph($places_day, $graph, false, null, $custompreferedplaces);      // create A custom graph which contain the Possible paths for USER:
                 $sourceNode = $graph1->getVertex(0);
@@ -293,8 +298,11 @@ class GenerateTripController extends Controller
                     }
 
                     $custompreferedplaces = self::selectRandomTypes($preferedplaces, $rest, $EconomicSituation);
-                    $places_day = DataImport::importData($custompreferedplaces, $Data, $City_name, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces);        //get the data by places1; places1 is a nested array which include the prefered places for USER and the airport
-                    //    return $places_day;
+                    $places_day = DataImport::importData($custompreferedplaces, $Data, $City_name, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces, $i);        //get the data by places1; places1 is a nested array which include the prefered places for USER and the airport
+                    //     return $places_day;
+                    /*       if($i == 2) {
+                               return $places_day;
+                           }*/
                     $graph = new Graph();
                     $graph1 = CustomGraph::buildGraph($places_day, $graph, $changecity, $hotelAttributes, $custompreferedplaces);      // create A custom graph which contain the Possible paths for USER:
                     $sourceNode = $graph1->getVertex(0);
@@ -320,7 +328,7 @@ class GenerateTripController extends Controller
                     }
                     $BudgetOfDay -= $TravelCost;
                     $custompreferedplaces = self::selectRandomTypes($preferedplaces, $rest, $EconomicSituation);
-                    $places_day = DataImport::importData($preferedplaces, $Data, $City_name, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces);
+                    $places_day = DataImport::importData($preferedplaces, $Data, $City_name, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces, $i);
 
                     $graph = new Graph();
                     $graph1 = CustomGraph::buildGraph($places_day, $graph, $changecity, $hotelAttributes, $custompreferedplaces);      // create A custom graph which contain the Possible paths for USER:
@@ -337,19 +345,19 @@ class GenerateTripController extends Controller
                     $hotelAttributes = $nodeAttributes->getAttributes();
                 }
             }
-            /*        $time = 0;
-                    foreach($path as $node_id) {
-                        $node = $graph1->getvertex($node_id);
-                        $nodetime = $node->getAttribute('time');
-                        $nodetype = $node->getAttribute('placeType');
-                        $time += $nodetime;
-                        if($time > 11) {
-                            if($nodetype != "Resturant") {
-                                $userplaces = array_diff(array($path, $node_id));
-                                $userplaces = array_values($path);
-                            }
-                        }
-                    }*/
+            $time = 0;
+            foreach($path as $node_id) {
+                $node = $graph1->getvertex($node_id);
+                $nodetime = $node->getAttribute('time');
+                $nodetype = $node->getAttribute('placeType');
+                $time += $nodetime;
+                if($time > 7) {
+                    if($nodetype != "Resturant" || $nodetime < 3) {
+                        $userplaces = array_diff(array($path, $node_id));
+                        $userplaces = array_values($path);
+                    }
+                }
+            }
 
 
             // calculate the total cost of all nodes
