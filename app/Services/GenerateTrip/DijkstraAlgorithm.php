@@ -36,7 +36,7 @@ class DijkstraAlgorithm
             $minVertex = $nodeQueue->extract();
             $minVertexId = $minVertex->getId();
 
-            // update the distances for all neighpor of this node
+            // update the distances for all neighbor of this node
             foreach ($minVertex->getEdges() as $edge) {
                 $neighbor = $edge->getVertexEnd();
 
