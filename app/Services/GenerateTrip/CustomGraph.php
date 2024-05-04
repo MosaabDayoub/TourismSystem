@@ -145,7 +145,7 @@ class CustomGraph extends Graph
         }
 
         //create fake node (last level)
-        $end = ["id" => "10","name" => "destination",
+        $end = ["id" => 1234567,"name" => "destination",
         "lon" => 11.251828422382225,
         "lat" => 40.803499350173176,
         "price" => 0,

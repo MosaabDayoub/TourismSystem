@@ -57,6 +57,21 @@ class DataImport
         $budgetofday -= 70;
         $budgetofday = $budgetofday / $N_person;
 
+
+        foreach($placesofuser[ $cityname] as $citychoosentypes => $citychoosenplaces) {
+            if(!empty($citychoosentypes) && !in_array($citychoosentypes, $preferred) && $citychoosentypes != "Resturants" && $citychoosentypes != "Hotels") {
+                foreach($citychoosenplaces as $citychoosenplace) {
+
+                    if(!in_array($citychoosenplace['name'], $visitedplaces)) {
+
+                        $preferred[] = $citychoosentypes;
+                        break;
+                    }
+                }
+
+            }
+        }
+
         $preferred[] = "resturant";
         $preferred[] = "hotel";
         $place_costs = self::calculatePlaceCosts($budgetofday, $preferred, $N_person);
@@ -78,6 +93,7 @@ class DataImport
             $Airport[0]['time'] = 1;
             $places['Airport'] = $Airport;           // storage Airport of the capital array in places array
         }
+
 
 
         // fetch preferd places from Database
@@ -147,6 +163,9 @@ class DataImport
                     ${"SelectedPlaces" . $i}[$key]['price'] = 0;
                 }
                 if($placeType == "shopping") {
+                    if($place_costs[$placeType ] < 0) {
+                        $place_costs[$placeType ] = 0;
+                    }
                     ${"SelectedPlaces" . $i}[$key]['price'] = $place_costs[$placeType ];
                 }
                 ${"SelectedPlaces" . $i}[$key]['placeType'] = $placeType; // add type  for each element in array storage $selectedplaces
@@ -169,9 +188,6 @@ class DataImport
                 $preference_food = array_keys($data['preferedfood'], true);
             }
 
-            /*    if($k == 2 && $i == 1) {
-                    return $preference_food;
-                }*/
             if (count($preference_food) > 1) {
                 $halfwayPoint = ceil(count($preference_food) / 2);
                 $firstHalf = array_slice($preference_food, 0, $halfwayPoint);
@@ -204,15 +220,15 @@ class DataImport
                         return (array) $item;
                     })->toArray();
 
-                }
-                if(!empty(${"Resturants" . $i})) {
-                    $visitedtype = ${"Resturants" . $i}[0]['food_type'];
 
-                    if(($key = array_search($visitedtype, $preference_food)) !== false && count($preference_food) > 1) {
-                        unset($preference_food[$key]);
-                    }
                 }
+            }
+            if(!empty(${"Resturants" . $i})) {
+                $visitedtype = ${"Resturants" . $i}[0]['food_type'];
 
+                if(($key = array_search($visitedtype, $preference_food)) !== false && count($preference_food) > 1) {
+                    unset($preference_food[$key]);
+                }
             } else {
                 // Collect restaurants and get the smallest difference in price
                 $restaurantsWithDifferences = DB::table('resturant')
