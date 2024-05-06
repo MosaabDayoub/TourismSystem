@@ -11,7 +11,7 @@ class DataImport
 {
     public static function allocateTimeForPlaces($placesTypes)
     {
-        $totalHours = 6;
+        $totalHours = 7;
         $allocatedTime = [];
 
         foreach ($placesTypes as $place) {
