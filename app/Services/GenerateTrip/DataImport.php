@@ -9,6 +9,39 @@ use App\Http\Controllers\GenerateTripController;
 
 class DataImport
 {
+    public static function allocateTimeForPlaces($placesTypes)
+    {
+        $totalHours = 6;
+        $allocatedTime = [];
+
+        foreach ($placesTypes as $place) {
+            if ($place === 'natural' || $place === 'old' || $place === 'shopping') {
+                $min = 2;
+                $max = min(5, $totalHours);
+            } elseif ($place === 'night') {
+                $min = 1;
+                $max = min(3, $totalHours);
+            } else {
+                continue;
+            }
+
+            $time = ($min < $max) ? random_int($min, $max) : $min;
+
+            if ($totalHours - $time < 0) {
+                $time = $totalHours;
+            }
+
+            $totalHours -= $time;
+
+            $allocatedTime[$place] = $time;
+
+            if ($totalHours <= 0) {
+                break;
+            }
+        }
+
+        return $allocatedTime;
+    }
     public static function calculatePlaceCosts($budgetOfDay, $preferred, $N_person)
     {
         $Totalcost = 0;
@@ -51,29 +84,25 @@ class DataImport
         return $costs;
     }
 
-    public static function importData(array $preferred, array $data, $cityname, $travelmethod, $budgetofday, $N_person, $visitedplaces, $placesofuser, $k)    // A funcyion for fetch Data from DB depending on user preferences
+    public static function importData(array $preferred, array $data, $cityname, $travelmethod, $budgetofday, $N_person, $visitedplaces, $placesofuser, $check_prefered, $placestime)    // A funcyion for fetch Data from DB depending on user preferences
     {
         $i = 0;
         $budgetofday -= 70;
         $budgetofday = $budgetofday / $N_person;
+        $mindifference = PHP_INT_MAX;
+        $shoppingprices = [43,63,83,102,122,21,31,41,51,61,54,74,94,64,74,84,94,104,114,124,134,144,154,164,174,184,194];
+        $closesthoppingsprice = 0;
+        $key = array_search("night", $preferred);
+        if ($key !== false && $key < count($preferred) - 1) {
 
-
-        foreach($placesofuser[ $cityname] as $citychoosentypes => $citychoosenplaces) {
-            if(!empty($citychoosentypes) && !in_array($citychoosentypes, $preferred) && $citychoosentypes != "Resturants" && $citychoosentypes != "Hotels") {
-                foreach($citychoosenplaces as $citychoosenplace) {
-
-                    if(!in_array($citychoosenplace['name'], $visitedplaces)) {
-
-                        $preferred[] = $citychoosentypes;
-                        break;
-                    }
-                }
-
-            }
+            unset($preferred[$key]);
+            $preferred = array_values($preferred);
+            $preferred[] = "night";
         }
-
+        $newpreferred = $preferred;
         $preferred[] = "resturant";
         $preferred[] = "hotel";
+
         $place_costs = self::calculatePlaceCosts($budgetofday, $preferred, $N_person);
 
         //find the airport of this capital
@@ -94,8 +123,6 @@ class DataImport
             $places['Airport'] = $Airport;           // storage Airport of the capital array in places array
         }
 
-
-
         // fetch preferd places from Database
         foreach($preferred as $placeType) {
             $i++;
@@ -110,54 +137,65 @@ class DataImport
                     if(in_array($placechoosen['name'], $visitedplaces)) {
                         continue;
                     }
-
                     ${"SelectedPlaces" . $i} = DB::table("{$placeType}place")
                     ->join('City', "{$placeType}place.city_id", '=', 'City.city_id')
                     ->select($placeType.'place.*')
                     ->where('City.name', '=', $cityname)
                     ->where($placeType.'place.id', '=', $placechoosen['id'])
+
                     ->get()
                     ->map(function ($item) {
                         return (array) $item;
                     })->toArray();
-
                 }
-
             }
+
             if(empty(${"SelectedPlaces" . $i})) {
                 if($placeType == "natural" || $placeType == "shopping") {
-                    ${"SelectedPlaces" . $i} = DB::table("{$placeType}place")
-                    ->join('City', "{$placeType}place.city_id", '=', 'City.city_id')
-                    ->select($placeType.'place.*')
-                    ->where('City.name', '=', $cityname)
-                    ->whereNotIn($placeType.'place.name', $visitedplaces)
-                    ->get()
-                    ->map(function ($item) {
-                        return (array) $item;
-                    })->toArray();
-                } else { // Collect places and get the smallest difference in price
-                    $SelectedPlacesWithDifferences = DB::table("{$placeType}place")
-                    ->join('City', "{$placeType}place.city_id", '=', 'City.city_id')
-                    ->where('City.name', '=', $cityname)
-                    ->whereNotIn($placeType.'place.name', $visitedplaces)
-                    ->select("{$placeType}place.*", DB::raw("ABS({$placeType}place.price - {$place_costs[$placeType ]}) AS price_difference"))
-                    ->get();
 
-
-                    // Find the smallest price difference based on the collected records
-                    $closestPriceDifference = $SelectedPlacesWithDifferences->min('price_difference');
-
-                    // Filter records to bring in places with the smallest price difference
-                    ${"SelectedPlaces" . $i} = $SelectedPlacesWithDifferences->filter(function ($selectedplaces) use ($closestPriceDifference) {
-                        return $selectedplaces->price_difference == $closestPriceDifference;
-                    })->values()
-
+                    $SelectedPlacesClosestTime = DB::table("{$placeType}place")
+                        ->join('City', "{$placeType}place.city_id", '=', 'City.city_id')
+                        ->select("{$placeType}place.*", DB::raw("ABS({$placeType}place.time - {$placestime[$placeType]}) AS time_difference"))
+                        ->where('City.name', '=', $cityname)
+                        ->whereNotIn($placeType.'place.name', $visitedplaces)
+                        ->orderBy('time_difference', 'asc')
+                        ->get()
                         ->map(function ($item) {
                             return (array) $item;
                         })->toArray();
+                    if ($SelectedPlacesClosestTime) {
 
+                        ${"SelectedPlaces" . $i} = $SelectedPlacesClosestTime;
+
+                    }
+
+
+                } else { // Collect places and get the smallest difference in price and time
+                    $placesQuery = DB::table("{$placeType}place")
+                    ->join('City', "{$placeType}place.city_id", '=', 'City.city_id')
+                    ->where('City.name', '=', $cityname)
+                    ->whereNotIn($placeType.'place.name', $visitedplaces)
+                    ->select(
+                        "{$placeType}place.*",
+                        DB::raw("ABS({$placeType}place.time - " . $placestime[$placeType] . ") AS time_difference"),
+                        DB::raw("ABS({$placeType}place.price - " . $place_costs[$placeType] . ") AS price_difference")
+                    );
+                    $closestPlace = $placesQuery
+                    ->orderBy('time_difference', 'asc')
+                    ->orderBy('price_difference', 'asc')
+                    ->get()
+                     ->map(function ($item) {
+                         return (array) $item;
+                     })->toArray();
+
+
+                    if ($closestPlace) {
+
+                        ${"SelectedPlaces" . $i} = $closestPlace;
+                    }
                 }
             }
+
             foreach (${"SelectedPlaces" . $i} as $key => $place) {
                 if($placeType == "natural") {
                     ${"SelectedPlaces" . $i}[$key]['price'] = 0;
@@ -165,17 +203,26 @@ class DataImport
                 if($placeType == "shopping") {
                     if($place_costs[$placeType ] < 0) {
                         $place_costs[$placeType ] = 0;
+                    } else {
+                        foreach($shoppingprices as $price) {
+                            $newmindifference = abs($place_costs[$placeType ] - $price);
+                            if($newmindifference < $mindifference) {
+                                $closesthoppingsprice = $price;
+                            }
+                        }
+                        $place_costs[$placeType ] =  $closesthoppingsprice;
                     }
                     ${"SelectedPlaces" . $i}[$key]['price'] = $place_costs[$placeType ];
                 }
                 ${"SelectedPlaces" . $i}[$key]['placeType'] = $placeType; // add type  for each element in array storage $selectedplaces
             }
 
-            $places[$placeType] = ${"SelectedPlaces" . $i}; // storage $selectedplaces array in places array
+            $places[$placeType ] = ${"SelectedPlaces" . $i}; // storage $selectedplaces array in places array
 
             if(($key = array_search($placeType, $preferred)) !== false) {
                 unset($preferred[$key]);
             }
+
             $budgetofday -= $places[$placeType][0]['price'];
             $place_costs = self::calculatePlaceCosts($budgetofday, $preferred, $N_person);
 
@@ -323,7 +370,7 @@ class DataImport
 
         $places['Currentcity'] = $currentcity;       // storege currentcity array in places array
 
-
+        $places['preferred'] = $newpreferred;
         return $places;  // $places is array of array contain kay type -> value :array of places
 
     }
