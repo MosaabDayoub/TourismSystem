@@ -79,7 +79,7 @@ class DataImport
         $budgetofday = $budgetofday / $N_person;
         $mindifference = PHP_INT_MAX;
         $Total_time = 7;
-        $shoppingprices = [43 - 129,83,102,122,21,31,41,51,61,54,74,94,64,74,84,94,104,114,124,134,144,154,164,174,184,194];
+        $shoppingprices = [43, 63, 83, 102, 122, 21, 31, 41, 51, 61, 54, 74, 94, 64, 74, 84, 94, 104, 114, 124, 134, 144, 154, 164, 174, 184, 194];
         $closesthoppingsprice = 0;
         $key = array_search("night", $preferred);
         if ($key !== false && $key < count($preferred) - 1) {
@@ -202,7 +202,6 @@ class DataImport
                     // Variables can be stored in a variable with dynamic name if needed
                     ${"SelectedPlaces" . $i} = $selectedPlaces;
                 }
-
             }
 
             foreach (${"SelectedPlaces" . $i} as $key => $place) {
@@ -219,9 +218,7 @@ class DataImport
                                 $closesthoppingsprice = $price;
                             }
                         }
-
                         ${"SelectedPlaces" . $i}[$key]['price'] =  $closesthoppingsprice;
-
                     }
                     //
                 }
@@ -233,10 +230,11 @@ class DataImport
             if(($key = array_search($placeType, $preferred)) !== false) {
                 unset($preferred[$key]);
             }
-            $Total_time -= $places[$placeType][0]['time'];
+
+
             $budgetofday -= $places[$placeType][0]['price'];
             $place_costs = self::calculatePlaceCosts($budgetofday, $preferred, $shoppingprices);
-            $placestime = self::allocateTimeForPlaces($newpreferred, $Total_time);
+
 
         }
 
@@ -278,7 +276,6 @@ class DataImport
                     ->map(function ($item) {
                         return (array) $item;
                     })->toArray();
-
 
                 }
             }
