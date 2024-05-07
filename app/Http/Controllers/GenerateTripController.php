@@ -35,7 +35,6 @@ class GenerateTripController extends Controller
     public static function selectRandomTypes($userplaces, $Rest, $economicsituation, $previoustypeselected, $y)              // A function for performs random selection and ensures diversity
     {
 
-
         if($economicsituation == "green") {
             $number_of_choices = count($userplaces)  ;
         }
@@ -51,10 +50,9 @@ class GenerateTripController extends Controller
         $selected_types = array_values($selected_types);
         $reminder = count($selected_types) - $number_of_choices;
 
-
         if ($reminder < 0) {
             $reminder = abs($reminder);
-            for ($i = 0; $i < count($previoustypeselected) && $reminder > 0; $i++) {
+            while($reminder > 0) {
                 $randomindex = random_int(0, count($previoustypeselected) - 1);
                 if (!in_array($previoustypeselected[$randomindex], $selected_types)) {
                     array_push($selected_types, $previoustypeselected[$randomindex]);
@@ -264,7 +262,6 @@ class GenerateTripController extends Controller
                 } else { //other days
                     $date = date("Y-m-d", strtotime($date . ' +1 day'));
 
-
                     if(($i % $city1NumberOfDays == 1) || (($days % $cityNumberOfDays == 0 && $days != 0) && $i > $city1NumberOfDays)) { // check if we have to change city
                         $changecity = true;
                         $sourcecityQuery = DB::table('City')->select('*')->where('name', $City_name)->first();     // fetch the source city information from database
@@ -305,6 +302,7 @@ class GenerateTripController extends Controller
 
 
                 $custompreferedplaces = self::selectRandomTypes($preferedplaces, $rest, $EconomicSituation, $previoustype, $i);
+
                 if($checkprefered == true) {
                     foreach($selectedplaces[ $City_name] as $citychoosentypes => $citychoosenplaces) {
                         if(!empty($citychoosentypes) && !in_array($citychoosentypes, $custompreferedplaces) && $citychoosentypes != "Resturants" && $citychoosentypes != "Hotels") {
@@ -320,10 +318,10 @@ class GenerateTripController extends Controller
                         }
                     }
                 }
-                $places_time = DataImport::allocateTimeForPlaces($custompreferedplaces);
-                $newcustompreferedplaces = array_keys($places_time);
 
-                $places_day = DataImport::importData($newcustompreferedplaces, $Data, $City_name, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces, $checkprefered, $places_time);
+                //$newcustompreferedplaces = array_keys($places_time);
+
+                $places_day = DataImport::importData($custompreferedplaces, $Data, $City_name, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces, $checkprefered);
                 //return $places_day;
                 $graph = new Graph();
                 $graph1 = CustomGraph::buildGraph($places_day, $graph, $changecity, $root, $places_day['preferred']);      // create A custom graph which contain the Possible paths for USER:
@@ -338,7 +336,7 @@ class GenerateTripController extends Controller
                 $nodeAttributes = $currenthotel->getAttributeBag();
                 $hotelAttributes = $nodeAttributes->getAttributes();
 
-                $previoustype = $newcustompreferedplaces;
+                $previoustype =  $custompreferedplaces;
 
                 // calculate time
                 /*     $totalTime = 0;
@@ -488,6 +486,9 @@ class GenerateTripController extends Controller
                 );
 
                 $trip_days["day_" . $i]['dayId'] = $dayid;
+                $trip_days["day_" . $i]['EconomicSituation'] = $EconomicSituation;
+                $trip_days["day_" . $i]['custompreferedplaces'] = $custompreferedplaces;
+
 
                 $trip_days["day_" . $i]['date'] = $date;
                 $trip_days["day_" . $i]['city'] = $places_day['Currentcity'];
