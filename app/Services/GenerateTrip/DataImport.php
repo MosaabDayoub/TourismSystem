@@ -72,7 +72,7 @@ class DataImport
         return $costs;
     }
 
-    public static function importData(array $preferred, array $data, $cityname, $travelmethod, $budgetofday, $N_person, $visitedplaces, $placesofuser, $check_prefered)    // A funcyion for fetch Data from DB depending on user preferences
+    public static function importData(array $preferred, array $data, $cityname, $travelmethod, $budgetofday, $N_person, $visitedplaces, $placesofuser)    // A funcyion for fetch Data from DB depending on user preferences
     {
         $i = 0;
         $budgetofday -= 70;
@@ -89,11 +89,14 @@ class DataImport
             $preferred[] = "night";
         }
         $newpreferred = $preferred;
+        $newpreferred1 = $preferred;
         $preferred[] = "resturant";
         $preferred[] = "hotel";
 
         $place_costs = self::calculatePlaceCosts($budgetofday, $preferred, $shoppingprices);
         $placestime = DataImport::allocateTimeForPlaces($newpreferred, $Total_time);
+
+
         //find the airport of this capital
         if($travelmethod === "plane") {
             $Airport = DB::table('City')
@@ -136,7 +139,9 @@ class DataImport
                         return (array) $item;
                     })->toArray();
                 }
+
             }
+            //  return ${"SelectedPlaces" . $i};
 
             if(empty(${"SelectedPlaces" . $i})) {
                 if($placeType == "natural" || $placeType == "shopping") {
@@ -234,7 +239,13 @@ class DataImport
 
             $budgetofday -= $places[$placeType][0]['price'];
             $place_costs = self::calculatePlaceCosts($budgetofday, $preferred, $shoppingprices);
+            if(($key = array_search($placeType, $newpreferred)) !== false) {
+                unset($newpreferred[$key]);
 
+
+            }
+            $Total_time -= $places[$placeType][0]['time'];
+            $placestime = self::allocateTimeForPlaces($newpreferred, $Total_time);
 
         }
 
@@ -379,7 +390,7 @@ class DataImport
 
         $places['Currentcity'] = $currentcity;       // storege currentcity array in places array
 
-        $places['preferred'] = $newpreferred;
+        $places['preferred'] = $newpreferred1;
         return $places;  // $places is array of array contain kay type -> value :array of places
 
     }

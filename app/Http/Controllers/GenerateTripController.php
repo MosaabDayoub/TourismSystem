@@ -61,12 +61,8 @@ class GenerateTripController extends Controller
             }
         }
 
-
-
-
         return $selected_types;
     }
-
 
     public static function haversineDistance($source, $destination)      // A function for calculate a haversineDistance between two point
     {
@@ -100,7 +96,6 @@ class GenerateTripController extends Controller
             $selectedplaces = $Data['places'];
             if($Data['totalBudget'] == "Minimum") {
                 $Budget = 500;
-
             }
             if($Data['totalBudget'] == "Open") {
                 $Budget = PHP_INT_MAX;
@@ -204,13 +199,12 @@ class GenerateTripController extends Controller
                 if($i > $city1NumberOfDays) {
                     $days += 1;
                 }
-                $checkprefered = true;
+                $onlyday = true;
                 $changecity = false;
                 $travelmethod = null;
                 $TravelCost = 0;
                 $time = 0;
-                $path = [];
-
+                $userplacestime = [];
 
                 $BudgetOfDay = floor(($Budget - $Totalcost) / ($numberOfDays - ($i - 1)));
 
@@ -236,7 +230,7 @@ class GenerateTripController extends Controller
 
                     if($city1NumberOfDays > 1) {
                         $rest = true;
-                        $checkprefered = false;
+                        $onlyday  = false;
                     }
 
                     // insert trip info into trip table
@@ -281,7 +275,7 @@ class GenerateTripController extends Controller
                         $BudgetOfDay -= $TravelCost ;
                         if($cityNumberOfDays > 1) {
                             $rest = true;
-                            $checkprefered = false;
+                            $onlyday  = false;
                         }
 
                     } else {
@@ -296,6 +290,7 @@ class GenerateTripController extends Controller
                 }
                 if($i == 1) {
                     $root = null;
+                    $EconomicSituation = "orange";
                 } else {
                     $root = $hotelAttributes;
                 }
@@ -303,25 +298,46 @@ class GenerateTripController extends Controller
 
                 $custompreferedplaces = self::selectRandomTypes($preferedplaces, $rest, $EconomicSituation, $previoustype, $i);
 
-                if($checkprefered == true) {
-                    foreach($selectedplaces[ $City_name] as $citychoosentypes => $citychoosenplaces) {
-                        if(!empty($citychoosentypes) && !in_array($citychoosentypes, $custompreferedplaces) && $citychoosentypes != "Resturants" && $citychoosentypes != "Hotels") {
+
+                foreach($selectedplaces[ $City_name] as $citychoosentypes => $citychoosenplaces) {
+
+                    if($citychoosentypes === "Resturants" || $citychoosentypes === "Hotels") {
+                        continue;
+                    } else {
+
+                        if(!empty($citychoosenplaces)) {
+
                             foreach($citychoosenplaces as $citychoosenplace) {
 
                                 if(!in_array($citychoosenplace['name'], $visited)) {
+                                    $userplacestime[$citychoosentypes] = $citychoosenplace['time'];
+                                    if(!in_array($citychoosentypes, $custompreferedplaces)) {
+                                        array_unshift($custompreferedplaces, $citychoosentypes);
+                                    } else {
+                                        $key1 = array_search($citychoosentypes, $custompreferedplaces);
+                                        if ($key1 !== false && $key1 >  0) {
+                                            unset($custompreferedplaces[$key1]);
+                                            $custompreferedplaces = array_values($custompreferedplaces);
+                                            array_unshift($custompreferedplaces, $citychoosentypes);
 
-                                    $custompreferedplaces[] = $citychoosentypes;
-                                    break;
+                                        }
+                                    }
                                 }
                             }
-
                         }
                     }
                 }
+                // return $userplacestime;
+                if(array_sum($userplacestime) >= 4) {
+                    $custompreferedplaces = array_keys($userplacestime);
+                    if($onlyday == false) {
+                        $half_size = ceil(count($custompreferedplaces) / 2);
+                        $custompreferedplaces = array_slice($custompreferedplaces, 0, $half_size);
 
-                //$newcustompreferedplaces = array_keys($places_time);
+                    }
+                };
 
-                $places_day = DataImport::importData($custompreferedplaces, $Data, $City_name, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces, $checkprefered);
+                $places_day = DataImport::importData($custompreferedplaces, $Data, $City_name, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces);
                 //return $places_day;
                 $graph = new Graph();
                 $graph1 = CustomGraph::buildGraph($places_day, $graph, $changecity, $root, $places_day['preferred']);      // create A custom graph which contain the Possible paths for USER:
@@ -463,7 +479,7 @@ class GenerateTripController extends Controller
 
                     }
                 }
-
+                $trip_days["day_" . $i]['EconomicSituation'] = $EconomicSituation;
                 $Budget_difference = ($BudgetOfDay + $TravelCost) - ceil($cost);
 
                 if($Budget_difference > 75) {
@@ -486,7 +502,7 @@ class GenerateTripController extends Controller
                 );
 
                 $trip_days["day_" . $i]['dayId'] = $dayid;
-                $trip_days["day_" . $i]['EconomicSituation'] = $EconomicSituation;
+
                 $trip_days["day_" . $i]['custompreferedplaces'] = $custompreferedplaces;
 
 
@@ -526,7 +542,8 @@ class GenerateTripController extends Controller
                     $n += 1;
                     $node = $graph1->getvertex($nodeid);
                     $Attributes = $node->getAttributeBag();
-
+                    $NodeAttributes = $Attributes->getAttributes();
+                    $visited[] = $NodeAttributes['name'];
                     if($isFirstnode == true) {
                         $Attributes->setAttribute("transportaionMethod", $travelmethod);
                         $dayPlaces[$n] = $Attributes->getAttributes();
