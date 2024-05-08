@@ -141,7 +141,6 @@ class DataImport
                 }
 
             }
-            //  return ${"SelectedPlaces" . $i};
 
             if(empty(${"SelectedPlaces" . $i})) {
                 if($placeType == "natural" || $placeType == "shopping") {
@@ -181,22 +180,22 @@ class DataImport
                     )
                     ->get();
 
-                    // Find the smallest price difference based on the collected records
-                    $closestPriceDifference = $placeWithDifferences->min('price_difference');
+                    // filter these records to bring in places with the smallest time difference
+                    $closestTimeDifference = $placeWithDifferences->min('time_difference');
 
                     // Filter records to bring in places with the smallest price difference
-                    $placesWithClosestPriceDifference = $placeWithDifferences
-                    ->filter(function ($place) use ($closestPriceDifference) {
-                        return $place->price_difference == $closestPriceDifference;
+                    $placesWithClosestTimeDifference = $placeWithDifferences
+                    ->filter(function ($place) use ($closestTimeDifference) {
+                        return $place->time_difference == $closestTimeDifference;
                     })
                     ->values();
 
-                    // Now, filter these records to bring in places with the smallest time difference
-                    $closestTimeDifference = $placesWithClosestPriceDifference->min('time_difference');
 
-                    $selectedPlaces = $placesWithClosestPriceDifference
-                    ->filter(function ($place) use ($closestTimeDifference) {
-                        return $place->time_difference == $closestTimeDifference;
+                    //Now, Find the smallest price difference based on the collected records
+                    $closestPriceDifference = $placesWithClosestTimeDifference->min('price_difference');
+                    $selectedPlaces = $placesWithClosestTimeDifference
+                    ->filter(function ($place) use ($closestPriceDifference) {
+                        return $place->price_difference == $closestPriceDifference;
                     })
                     ->values()
                     ->map(function ($item) {
@@ -246,6 +245,7 @@ class DataImport
             }
             $Total_time -= $places[$placeType][0]['time'];
             $placestime = self::allocateTimeForPlaces($newpreferred, $Total_time);
+
 
         }
 
