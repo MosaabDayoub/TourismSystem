@@ -21,18 +21,34 @@ use Graphp\GraphViz\GraphViz;
 
 class GenerateTripController extends Controller
 {
-    public static function efficientShuffle(&$array)
+    public static function citydays(&$Array, $NumberOfDays)
     {
-        $size = count($array);
-        for ($k = 0; $k < $size; $k++) {
-            $j = mt_rand($k, $size - 1);
-            $temp = $array[$k];
-            $array[$k] = $array[$j];
-            $array[$j] = $temp;
+        $key1 = array_search(1, $Array); // make the capital first element in the array
+        unset($Array[$key1]);
+        $Array = array_keys($Array);
+        array_unshift($Array, $key1);
+
+        $N_cities = count($Array);
+        $newArray = array();
+        $cityNumberOfDays = floor($NumberOfDays / $N_cities);           // number of day in each city in the country
+
+        $reminderdays = $NumberOfDays % $N_cities;
+
+        foreach($Array as $city) {
+            if($reminderdays > 0) {
+                $newArray[$city] = $cityNumberOfDays + 1;
+            } else {
+                $newArray[$city] = $cityNumberOfDays;
+            }
+
+            $reminderdays--;
         }
+
+        return $newArray;
     }
 
-    public static function selectRandomTypes($userplaces, $Rest, $economicsituation, $previoustypeselected, $y)              // A function for performs random selection and ensures diversity
+
+    public static function selectRandomTypes($userplaces, $economicsituation, $previoustypeselected)              // A function for performs random selection and ensures diversity
     {
 
         if($economicsituation == "green") {
@@ -102,14 +118,13 @@ class GenerateTripController extends Controller
             } if($Data['totalBudget'] != "Minimum" && $Data['totalBudget'] != "Open") {
                 $Budget = $Data['totalBudget'];
             }
-
-            $days = 1;
+            $daysofcity = 0;
             $cityindex = 0;
             $ticketprice = 0;
             $Totalcost = 0;
-            $EconomicSituation = "green";
             $rest = false;
-            $previoustype = [];
+            $EconomicSituation = "orange";
+            $previoustype = ["night"];
             $visited = [];
             $response = [];       // response Array Initialization
             $requiredFields = ['user_id','fromcity','tocountry','N.days','N.people','preferedplaces','preferedfood','date','totalBudget','places'
@@ -141,9 +156,9 @@ class GenerateTripController extends Controller
                 );
             }
 
-            if ($numberOfDays > 26) {
+            if ($numberOfDays > 30) {
                 return response()->json(
-                    ['error' => "Maximum Number Of Days is 26 "],
+                    ['error' => "Maximum Number Of Days is 30 "],
                     Response::HTTP_BAD_REQUEST
                 );
             }
@@ -176,42 +191,27 @@ class GenerateTripController extends Controller
                 );
             }
 
-            $countrycities1['name'] = array_column($countrycitiesQuery, 'name');          // array include the city
+            $countrycities0['name'] = array_column($countrycitiesQuery, 'name');          // array include the city
             $countrycities2['capital'] = array_column($countrycitiesQuery, 'capital');       // array include numbers which indicate if the city is a capital
+            $countrycities1 = array_combine($countrycities0['name'], $countrycities2['capital']);    // array include cities of the desination country as a key and numbers which indicate if this city is a capital as value
 
-
-            $countrycities = array_combine($countrycities1['name'], $countrycities2['capital']);    // array include cities of the desination country as a key and numbers which indicate if this city is a capital as value
-            $N_cities = count($countrycities1['name']);    // number of country cities
-
-            $cityNumberOfDays = floor($numberOfDays / $N_cities);           // number of day in each city in the country
-            $reminderdays = $numberOfDays % $N_cities;
-
-            $city1NumberOfDays = $cityNumberOfDays + $reminderdays;
-
-            if($numberOfDays < $N_cities) {
-                $cityNumberOfDays = 1;
-                $city1NumberOfDays = 1;
-            }
-            $cities = array_keys($countrycities);
-            $City_name = $cities[0];
+            $schedule = self::citydays($countrycities1, $numberOfDays);
+            $countrycities = array_keys($schedule);
 
             for ($i = 1 ; $i <= $numberOfDays ;$i++) {         // loop for every day in the trip
-                if($i > $city1NumberOfDays) {
-                    $days += 1;
-                }
-                $onlyday = true;
                 $changecity = false;
                 $travelmethod = null;
                 $TravelCost = 0;
                 $time = 0;
                 $userplacestime = [];
 
+                $daysofcity++;
                 $BudgetOfDay = floor(($Budget - $Totalcost) / ($numberOfDays - ($i - 1)));
 
                 if ($i == 1) {        // Day1
                     $date = $Date ;
-                    $destinationcityname = array_search(1, $countrycities);            // find the capital
-
+                    $destinationcityname = $countrycities[0];
+                    $City_name = $countrycities[0];
                     $destinationcityQuery = DB::table('City')->select('*')->where('name', $destinationcityname)->first();     // fetch the destination city information from database
                     $destinationcity = $destinationcityQuery ? get_object_vars($destinationcityQuery) : null; // to convert stdclass object to array
                     $sourcecityQuery = DB::table('City')->select('*')->where('name', $fromCity)->first();     // fetch the source city information from database
@@ -226,12 +226,7 @@ class GenerateTripController extends Controller
                     $travelmethod = CustomGraph::travell_method($distance) ;
                     $ticketprice = $distance * 0.09 ;
                     $TravelCost = $ticketprice * $numberOfPeople;
-                    $BudgetOfDay -= $TravelCost;
 
-                    if($city1NumberOfDays > 1) {
-                        $rest = true;
-                        $onlyday  = false;
-                    }
 
                     // insert trip info into trip table
                     $tripid = DB::table('trip')->insertGetId(
@@ -255,15 +250,16 @@ class GenerateTripController extends Controller
 
                 } else { //other days
                     $date = date("Y-m-d", strtotime($date . ' +1 day'));
-
-                    if(($i % $city1NumberOfDays == 1) || (($days % $cityNumberOfDays == 0 && $days != 0) && $i > $city1NumberOfDays)) { // check if we have to change city
+                    if($daysofcity > $schedule[$City_name]) { // check if we have to change city
+                        $daysofcity = 1;
                         $changecity = true;
                         $sourcecityQuery = DB::table('City')->select('*')->where('name', $City_name)->first();     // fetch the source city information from database
                         $sourcecity = get_object_vars($sourcecityQuery);  // to convert stdclass object to array
                         $cityindex += 1;
-                        $City_name = $cities[$cityindex];
+                        $City_name =  $countrycities[$cityindex];
                         $destinationcityQuery = DB::table('City')->select('*')->where('name', $City_name)->first();     // fetch the destination city information from database
                         $destinationcity = get_object_vars($destinationcityQuery);  // to convert stdclass object to array
+
                         $distance = self::haversineDistance($sourcecity, $destinationcity);
                         $travelmethod = CustomGraph::travell_method($distance) ;
                         if($travelmethod == "plane") {
@@ -272,17 +268,11 @@ class GenerateTripController extends Controller
                         } else {
                             $TravelCost = $distance * 1.6;  // distance * cost of 1 litre fuel
                         }
-                        $BudgetOfDay -= $TravelCost ;
-                        if($cityNumberOfDays > 1) {
-                            $rest = true;
-                            $onlyday  = false;
-                        }
-
-                    } else {
-                        $BudgetOfDay -= $TravelCost;
-
                     }
+
                 }
+
+                $BudgetOfDay -= $TravelCost;
                 if($changecity || $i == 1) {
                     $index = 1;
                 } else {
@@ -290,13 +280,11 @@ class GenerateTripController extends Controller
                 }
                 if($i == 1) {
                     $root = null;
-                    $EconomicSituation = "orange";
                 } else {
                     $root = $hotelAttributes;
                 }
 
-
-                $custompreferedplaces = self::selectRandomTypes($preferedplaces, $rest, $EconomicSituation, $previoustype, $i);
+                $custompreferedplaces = self::selectRandomTypes($preferedplaces, $EconomicSituation, $previoustype);
 
 
                 foreach($selectedplaces[ $City_name] as $citychoosentypes => $citychoosenplaces) {
@@ -327,10 +315,10 @@ class GenerateTripController extends Controller
                         }
                     }
                 }
-                // return $userplacestime;
+
                 if(array_sum($userplacestime) >= 4) {
                     $custompreferedplaces = array_keys($userplacestime);
-                    if($onlyday == false) {
+                    if($schedule[$City_name] > 1) {
                         $half_size = ceil(count($custompreferedplaces) / 2);
                         $custompreferedplaces = array_slice($custompreferedplaces, 0, $half_size);
 
