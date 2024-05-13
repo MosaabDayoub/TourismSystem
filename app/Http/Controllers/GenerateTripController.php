@@ -93,7 +93,7 @@ class GenerateTripController extends Controller
         $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
             cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
 
-        $distance = $angle *  6371;
+        $distance = $angle *  6371000;
         return $distance;
     }
 
@@ -224,7 +224,7 @@ class GenerateTripController extends Controller
                     }
                     $distance = self::haversineDistance($sourcecity, $destinationcity);
                     $travelmethod = CustomGraph::travell_method($distance) ;
-                    $ticketprice = $distance * 0.09 ;
+                    $ticketprice = ($distance / 1000) * 0.09 ;
                     $TravelCost = $ticketprice * $numberOfPeople;
 
 
@@ -264,10 +264,10 @@ class GenerateTripController extends Controller
                         $distance = self::haversineDistance($sourcecity, $destinationcity);
                         $travelmethod = CustomGraph::travell_method($distance) ;
                         if($travelmethod == "plane") {
-                            $ticketprice = $distance * 0.09 ;
+                            $ticketprice = ($distance / 1000) * 0.09 ;
                             $TravelCost = $ticketprice * $numberOfPeople;
                         } else {
-                            $TravelCost = $distance * 1.6;  // distance * cost of 1 litre fuel
+                            $TravelCost = ($distance / 1000) * 1.6;  // distance * cost of 1 litre fuel
                         }
                     }
 
@@ -365,7 +365,7 @@ class GenerateTripController extends Controller
                             $edgetravelmethod =  $preedge->getAttribute('travelMethod');
                             $edgedistance =  $preedge->getAttribute('distance');
                             if($edgetravelmethod == "car") {
-                                $cost += $edgedistance * 1.6; // 1.6 is avg of Taxi cost in 1KM
+                                $cost += ($edgedistance / 1000) * 1.6; // 1.6 is avg of Taxi cost in 1KM
                             }
                         }
                     }

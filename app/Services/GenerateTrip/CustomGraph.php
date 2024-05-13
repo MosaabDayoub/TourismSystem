@@ -16,11 +16,11 @@ class CustomGraph extends Graph
 {
     public static function travell_method($distance1)      // A function for find transportaionMethod
     {
-        if  ($distance1 <= 1) {
+        if  ($distance1 <= 1000) {
 
             return $transportaionMethod = "walking";
 
-        } elseif($distance1 > 1 && $distance1 <= 350) {
+        } elseif($distance1 > 1 && $distance1 <= 350000) {
 
             return $transportaionMethod = "car";
 
@@ -73,7 +73,7 @@ class CustomGraph extends Graph
         $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
         cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
 
-        $distance = $angle *  6371; // 6371 km : نصف قطر الارض
+        $distance = $angle *  6371000; // 6371000 m : نصف قطر الارض
 
         return $distance;
     }
