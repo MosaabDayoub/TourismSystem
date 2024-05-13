@@ -253,6 +253,7 @@ class GenerateTripController extends Controller
                     if($daysofcity > $schedule[$City_name]) { // check if we have to change city
                         $daysofcity = 1;
                         $changecity = true;
+                        $visited = [];
                         $sourcecityQuery = DB::table('City')->select('*')->where('name', $City_name)->first();     // fetch the source city information from database
                         $sourcecity = get_object_vars($sourcecityQuery);  // to convert stdclass object to array
                         $cityindex += 1;
@@ -326,7 +327,7 @@ class GenerateTripController extends Controller
                 };
 
                 $places_day = DataImport::importData($custompreferedplaces, $Data, $City_name, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces);
-                //return $places_day;
+
                 $graph = new Graph();
                 $graph1 = CustomGraph::buildGraph($places_day, $graph, $changecity, $root, $places_day['preferred']);      // create A custom graph which contain the Possible paths for USER:
                 //     $graphviz = new GraphViz(['binary' => 'C:\Program Files\Graphviz\bin\dot.exe']);      // for display the created graph
@@ -341,96 +342,6 @@ class GenerateTripController extends Controller
                 $hotelAttributes = $nodeAttributes->getAttributes();
 
                 $previoustype =  $custompreferedplaces;
-
-                // calculate time
-                /*     $totalTime = 0;
-                     $newnodes_att = [];
-                     $previoustype = $custompreferedplaces;
-
-                     //add limit for time of the day trip
-
-                     foreach ($path as $node_id) {
-
-                         $node = $graph1->getvertex($node_id);
-                         $newnode_att_bag = $node->getAttributeBag();
-                         $newnode_att = $newnode_att_bag->getAttributes();
-                         $nodetime = $node->getAttribute('time');
-                         $totalTime += $nodetime;
-
-                         $newnodes_att[] = $newnode_att;
-
-                     }
-
-                     $s = 1;
-                     $m = 0;
-                     $organizedPlaces = [];
-                     foreach ($newnodes_att  as $type => $place) {
-                         if($place['placeType'] == 'Hotel') {
-                             $organizedPlaces['Hotels'][] =  $place;
-                         } elseif($place['placeType'] == 'Resturant' && $s == 3) {
-                             $organizedPlaces['Resturants1'][] =  $place;
-                         } elseif($place['placeType'] == 'Resturant' && $s == count($newnodes_att)) {
-                             $organizedPlaces['Resturants2'][] =  $place;
-                         } else {
-                             $organizedPlaces[$place['placeType']][] = $place;
-                         }
-                         $s++;
-                     }
-
-
-                     $nonRemovableTypes = ['Resturant', 'Hotel','Airport'];
-                     $newtotaltime = $totalTime;
-
-                     //      while($newtotaltime >= 10) {
-                     $organizedPlaces =   array_reverse($organizedPlaces);
-                     //   $organizedPlaces = array_values($organizedPlaces);
-
-                     foreach ($organizedPlaces as $key => $place) {
-                         $found = false;
-                         if (!in_array($place[0]['placeType'], $nonRemovableTypes)) {
-                             foreach($selectedplaces[$City_name][$key] as $citychoosenplaces) {
-                                 if($citychoosenplaces['name'] == $place[0]['name']) {
-                                     $found = true ;
-                                 }
-                             }
-                             if($found == true) {
-                                 continue;
-                             }
-                             unset($places_day[ $key]);
-                             foreach ($custompreferedplaces as $key1 => $val) {
-                                 if ($val == $key) {
-                                     unset($custompreferedplaces[$key1]);
-                                 }
-                             }
-
-                             $newtotaltime -= $place[0]['time'];
-                             if($newtotaltime <= 14) {
-                                 break;
-                             } else {
-                                 continue;
-                             }
-
-                         }
-                     }
-
-                     $custompreferedplaces = array_values($custompreferedplaces);
-
-                     $previoustype = $custompreferedplaces;
-
-
-
-                     $graph = new Graph();
-                     $graph1 = CustomGraph::buildGraph($places_day, $graph, $changecity, $newnodes_att[0], $custompreferedplaces);      // create A custom graph which contain the Possible paths for USER:
-                     $sourceNode = $graph1->getVertex(0);
-
-                     list($distances, $previous, $paths) = DijkstraAlgorithm::allShortestPaths($graph1, $sourceNode);     // execute Dijkstra Algorithm on the created graph
-                     $path = end($paths);
-                     foreach($path as $visitednodes) {
-                         $visitednode = $graph1->getvertex($visitednodes);
-                         $nodetype = $visitednode->getAttribute('placeType');
-                         $nodename = $visitednode->getAttribute('name');
-                         $visited[] = $nodename;
-                     }*/
 
                 // calculate the total cost of all nodes
                 $cost = $TravelCost;

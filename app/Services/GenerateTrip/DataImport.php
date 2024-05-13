@@ -260,6 +260,7 @@ class DataImport
                 $halfwayPoint = ceil(count($preference_food) / 2);
                 $firstHalf = array_slice($preference_food, 0, $halfwayPoint);
                 $secondHalf = array_slice($preference_food, $halfwayPoint);
+
             } else {
                 $firstHalf = $preference_food;
                 $secondHalf = $preference_food;
@@ -269,6 +270,7 @@ class DataImport
             } else {
                 $preference_food = $secondHalf;
             }
+
             if(key_exists($cityname, $placesofuser) &&  key_exists('Resturants', $placesofuser[$cityname]) && !empty($placesofuser[$cityname]['Resturants'])) {
                 foreach($placesofuser[$cityname]['Resturants'] as $Resturant) {
 
@@ -306,8 +308,7 @@ class DataImport
                     ->select('resturant.*', DB::raw("ABS(resturant.price - {$place_costs['resturant']})  as price_difference"))
                     ->get();
 
-
-                // // Find the smallest price difference based on the collected records
+                // Find the smallest price difference based on the collected records
                 $closestPriceDifference = $restaurantsWithDifferences->min('price_difference');
 
                 // // Filter records to bring in restaurants with the smallest price difference
