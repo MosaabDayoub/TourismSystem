@@ -32,4 +32,5 @@ Route::put('/delete-image', [UserController::class, "delete_image"]);
 Route::get('/search', [SearchController::class, 'search']);
 Route::post('/get_all-cities', GenerateTripController::class . '@getallcities');
 Route::post('/get_all-countries', GenerateTripController::class . '@getallcountries');
-Route::put('/change-trip-place', TripController::class . '@changtripeplace');
+Route::put('/change-trip-place', TripController::class . '@changetripplace');
+Route::delete('/delete-trip-place', TripController::class . '@deletetripplace');

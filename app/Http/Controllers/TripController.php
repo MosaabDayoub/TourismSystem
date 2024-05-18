@@ -17,7 +17,7 @@ class TripController extends Controller
         return("Trip is deleted");
     }
 
-    public function changtripeplace(Request $request)
+    public function changetripplace(Request $request)
     {
         try {
             $Data = $request->all();
