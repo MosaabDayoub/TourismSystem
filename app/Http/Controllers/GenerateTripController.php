@@ -23,14 +23,43 @@ class GenerateTripController extends Controller
 {
     public static function getallcities(Request $request)
     {
-        $cities = DB::table('City')->pluck('name');
+
+        $startingLetter = strtolower($request->input('letter'));
+
+
+        if (!$startingLetter) {
+            return response()->json(['error' => 'No starting letter provided'], Response::HTTP_BAD_REQUEST);
+        }
+
+
+        $cities = DB::table('cities')->whereRaw('LOWER(name) LIKE ?', [$startingLetter . '%'])->pluck('name');
+
+
+        if ($cities->isEmpty()) {
+            return response()->json(['message' => 'No cities found starting with the letter ' . strtoupper($startingLetter)], Response::HTTP_OK);
+        }
+
 
         return response()->json(['cities' => $cities], Response::HTTP_OK);
     }
 
     public static function getallcountries(Request $request)
     {
-        $countries = DB::table('country')->pluck('country_name');
+        $startingLetter = strtolower($request->input('letter'));
+
+
+        if (!$startingLetter) {
+            return response()->json(['error' => 'No starting letter provided'], Response::HTTP_BAD_REQUEST);
+        }
+
+
+        $countries = DB::table('country')->whereRaw('LOWER(country_name) LIKE ?', [$startingLetter . '%'])->pluck('country_name');
+
+
+        if ($countries->isEmpty()) {
+            return response()->json(['message' => 'No countries found starting with the letter ' . strtoupper($startingLetter)], Response::HTTP_OK);
+        }
+
 
         return response()->json(['countries' => $countries], Response::HTTP_OK);
     }

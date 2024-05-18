@@ -30,6 +30,6 @@ Route::post('/update-image', [UserController::class, "upload_image"]);
 Route::put('/delete-image', [UserController::class, "delete_image"]);
 
 Route::get('/search', [SearchController::class, 'search']);
-Route::get('/get_all-cities', GenerateTripController::class . '@getallcities');
-Route::get('/get_all-countries', GenerateTripController::class . '@getallcountries');
+Route::post('/get_all-cities', GenerateTripController::class . '@getallcities');
+Route::post('/get_all-countries', GenerateTripController::class . '@getallcountries');
 Route::put('/change-trip-place', TripController::class . '@changtripeplace');

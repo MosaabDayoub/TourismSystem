@@ -36,6 +36,8 @@ class UserController extends Controller
                 "email" => $request->input("email"),
                 "password" => Hash::make($request->input("password")),
                 "age" => $request->input("age"),
+                'gender' => $request->input("gender"),
+                'country' => $request->input("country"),
             ]);
             $token1 = $newuser->createToken("auth_token");
 
@@ -46,6 +48,8 @@ class UserController extends Controller
                     'name' => $newuser->name,
                     'email' => $newuser->email,
                     'image' => null,
+                    'gender' => $newuser->gender,
+                    'country' => $newuser->country,
                     'age' => $newuser->age,
                     'token' => $token1->plainTextToken,
                 ]
@@ -91,8 +95,10 @@ class UserController extends Controller
                         'id' => $user->id,
                         'name' => $user->name,
                         'email' => $user->email,
-                        'image' => null,
+                        'image' => $user->image_refrence,
                         'age' => $user->age,
+                        'gender' => $user->gender,
+                        'country' => $user->country,
                         'token' => $token1->plainTextToken,
                     ],
                 ], Response::HTTP_OK);
