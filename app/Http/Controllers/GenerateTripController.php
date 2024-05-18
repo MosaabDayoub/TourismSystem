@@ -32,7 +32,7 @@ class GenerateTripController extends Controller
         }
 
 
-        $cities = DB::table('cities')->whereRaw('LOWER(name) LIKE ?', [$startingLetter . '%'])->pluck('name');
+        $cities = DB::table('city')->whereRaw('LOWER(name) LIKE ?', [$startingLetter . '%'])->pluck('name');
 
 
         if ($cities->isEmpty()) {
