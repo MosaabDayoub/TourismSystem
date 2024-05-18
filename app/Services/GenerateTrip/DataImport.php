@@ -14,7 +14,7 @@ class DataImport
         $Totaltime = 0;
         foreach ($placesTypes as $preferred_place) {
 
-            ${$preferred_place . "_avg"} = DB::table("{$preferred_place}place")->distinct()->avg('time');
+            ${$preferred_place . "_avg"} = DB::table("{$preferred_place}")->distinct()->avg('time');
 
             $Totaltime += ${$preferred_place . "_avg"};
         }
@@ -36,10 +36,10 @@ class DataImport
         $Totalcost = 0;
         foreach ($preferred as $preferred_place) {
 
-            if ($preferred_place == 'natural') {
+            if ($preferred_place == 'naturalplace') {
                 continue;
             }
-            if ($preferred_place == 'shopping') {
+            if ($preferred_place == 'shoppingplace') {
                 ${$preferred_place . "_avg"} = array_sum($Shoppingprices) / count($Shoppingprices);
                 continue;
             }
@@ -49,7 +49,7 @@ class DataImport
                 ${$preferred_place . "_avg"} = DB::table("{$preferred_place}")->distinct()->avg('price');
 
             } else {
-                ${$preferred_place . "_avg"} = DB::table("{$preferred_place}place")->distinct()->avg('price');
+                ${$preferred_place . "_avg"} = DB::table("{$preferred_place}")->distinct()->avg('price');
 
             }
             if($preferred_place == 'resturant') {
@@ -63,7 +63,7 @@ class DataImport
 
         foreach ($preferred as $preferred_place) {
 
-            if ($preferred_place != "natural" && isset(${$preferred_place . "_avg"})) {
+            if ($preferred_place != "naturalplace" && isset(${$preferred_place . "_avg"})) {
                 $place_cost = floor(($budgetOfDay * (${$preferred_place . "_avg"} / $Totalcost)));
                 $costs[$preferred_place] = $place_cost;
             }
@@ -81,12 +81,12 @@ class DataImport
         $Total_time = 7;
         $shoppingprices = [43, 63, 83, 102, 122, 21, 31, 41, 51, 61, 54, 74, 94, 64, 74, 84, 94, 104, 114, 124, 134, 144, 154, 164, 174, 184, 194];
         $closesthoppingsprice = 0;
-        $key = array_search("night", $preferred);
+        $key = array_search("nightplace", $preferred);
         if ($key !== false && $key < count($preferred) - 1) {
 
             unset($preferred[$key]);
             $preferred = array_values($preferred);
-            $preferred[] = "night";
+            $preferred[] = "nightplace";
         }
         $newpreferred = $preferred;
         $newpreferred1 = $preferred;
@@ -109,7 +109,7 @@ class DataImport
                 return (array) $item;
             })->toArray();
 
-            $Airport[0]['placeType'] = "Airport";
+            $Airport[0]['placeType'] = "airport";
             $Airport[0]['time'] = 1;
             $places['Airport'] = $Airport;           // storage Airport of the capital array in places array
         }
@@ -128,11 +128,11 @@ class DataImport
                     if(in_array($placechoosen['name'], $visitedplaces)) {
                         continue;
                     }
-                    ${"SelectedPlaces" . $i} = DB::table("{$placeType}place")
-                    ->join('City', "{$placeType}place.city_id", '=', 'City.city_id')
-                    ->select($placeType.'place.*')
+                    ${"SelectedPlaces" . $i} = DB::table($placeType)
+                    ->join('City', "{$placeType}".".city_id", '=', 'City.city_id')
+                    ->select("{$placeType}".'.*')
                     ->where('City.name', '=', $cityname)
-                    ->where($placeType.'place.id', '=', $placechoosen['id'])
+                    ->where("{$placeType}".'.id', '=', $placechoosen['id'])
 
                     ->get()
                     ->map(function ($item) {
@@ -143,13 +143,13 @@ class DataImport
             }
 
             if(empty(${"SelectedPlaces" . $i})) {
-                if($placeType == "natural" || $placeType == "shopping") {
+                if($placeType == "naturalplace" || $placeType == "shoppingplace") {
 
-                    $placeWithDifferencestime = DB::table("{$placeType}place")
-                    ->join('City', "{$placeType}place.city_id", '=', 'City.city_id')
+                    $placeWithDifferencestime = DB::table("{$placeType}")
+                    ->join('City', "{$placeType}".".city_id", '=', 'City.city_id')
                     ->where('City.name', '=', $cityname)
-                    ->whereNotIn($placeType.'place.name', $visitedplaces)
-                    ->select("{$placeType}place.*", DB::raw("ABS({$placeType}place.time - " . $placestime[$placeType] . ") AS time_difference"))
+                    ->whereNotIn("{$placeType}".'.name', $visitedplaces)
+                    ->select("{$placeType}".".*", DB::raw("ABS({$placeType}.time - " . $placestime[$placeType] . ") AS time_difference"))
                     ->get();
 
                     $closestTimeDifference = $placeWithDifferencestime->min('time_difference');
@@ -169,14 +169,14 @@ class DataImport
 
 
                 } else { // Collect places and get the smallest difference in price and time
-                    $placeWithDifferences = DB::table("{$placeType}place")
-                    ->join('City', "{$placeType}place.city_id", '=', 'City.city_id')
+                    $placeWithDifferences = DB::table($placeType)
+                    ->join('City', "{$placeType}".".city_id", '=', 'City.city_id')
                     ->where('City.name', '=', $cityname)
-                    ->whereNotIn($placeType.'place.name', $visitedplaces)
+                    ->whereNotIn("{$placeType}".'.name', $visitedplaces)
                     ->select(
-                        "{$placeType}place.*",
-                        DB::raw("ABS({$placeType}place.price - " . $place_costs[$placeType] . ") AS price_difference"),
-                        DB::raw("ABS({$placeType}place.time - " . $placestime[$placeType] . ") AS time_difference")
+                        "{$placeType}".".*",
+                        DB::raw("ABS({$placeType}.price - " . $place_costs[$placeType] . ") AS price_difference"),
+                        DB::raw("ABS({$placeType}.time - " . $placestime[$placeType] . ") AS time_difference")
                     )
                     ->get();
 
@@ -209,10 +209,10 @@ class DataImport
             }
 
             foreach (${"SelectedPlaces" . $i} as $key => $place) {
-                if($placeType == "natural") {
+                if($placeType == "naturalplace") {
                     ${"SelectedPlaces" . $i}[$key]['price'] = 0;
                 }
-                if($placeType == "shopping") {
+                if($placeType == "shoppingplace") {
                     if($place_costs[$placeType ] < 0) {
                         ${"SelectedPlaces" . $i}[$key]['price'] = 0;
                     } else {
@@ -271,8 +271,8 @@ class DataImport
                 $preference_food = $secondHalf;
             }
 
-            if(key_exists($cityname, $placesofuser) &&  key_exists('Resturants', $placesofuser[$cityname]) && !empty($placesofuser[$cityname]['Resturants'])) {
-                foreach($placesofuser[$cityname]['Resturants'] as $Resturant) {
+            if(key_exists($cityname, $placesofuser) &&  key_exists('resturant', $placesofuser[$cityname]) && !empty($placesofuser[$cityname]['resturant'])) {
+                foreach($placesofuser[$cityname]['resturant'] as $Resturant) {
 
 
                     if(in_array($Resturant['name'], $visitedplaces)) {
@@ -322,7 +322,7 @@ class DataImport
 
             }
             foreach (${"Resturants" . $i} as $key => $Resturant) {
-                ${"Resturants" . $i}[$key]['placeType'] = "Resturant";     // add type => resturant for each element in array $Resturants
+                ${"Resturants" . $i}[$key]['placeType'] = "resturant";     // add type => resturant for each element in array $Resturants
                 ${"Resturants" . $i}[$key]['time'] = 1;
                 if(!in_array($Resturant['name'], $visitedplaces)) {
                     $visitedplaces[] = $Resturant['name'];
@@ -342,8 +342,8 @@ class DataImport
 
 
         //fetch Hotels
-        if(key_exists($cityname, $placesofuser) &&  key_exists('Hotels', $placesofuser[$cityname]) && !empty($placesofuser[$cityname]['Hotels'])) {
-            foreach($placesofuser[$cityname]['Hotels'] as $hotel) {
+        if(key_exists($cityname, $placesofuser) &&  key_exists('hotel', $placesofuser[$cityname]) && !empty($placesofuser[$cityname]['hotel'])) {
+            foreach($placesofuser[$cityname]['hotel'] as $hotel) {
                 if(in_array($hotel, $visitedplaces)) {
                     continue;
                 }
@@ -378,7 +378,7 @@ class DataImport
             })->toArray();
         }
         foreach ($Hotels as $key => $Hotel) {
-            $Hotels[$key]['placeType'] = "Hotel";    // add type => Hotel for each element in array $Hotels
+            $Hotels[$key]['placeType'] = "hotel";    // add type => Hotel for each element in array $Hotels
             $Hotels[$key]['time'] = 2;
         }
 

@@ -49,7 +49,7 @@ class CustomGraph extends Graph
 
         $lon = substr($loc, $spacePosition + 1);     //cut the string (location) from space position to the end
 
-        $location = ['lat' => floatval($lat),'lon' => floatval($lon)];   // how the array will look like
+        $location = ['latitude' => floatval($lat),'longitude' => floatval($lon)];   // how the array will look like
         return $location;
     }
 
@@ -61,10 +61,10 @@ class CustomGraph extends Graph
         $locTo_string = $vertex2->getAttribute('location');
         $locTo_array = self::getlocation($locTo_string);
 
-        $latFrom = deg2rad($locFrom_array['lat']);
-        $lonFrom = deg2rad($locFrom_array['lon']);
-        $latTo = deg2rad($locTo_array['lat']);
-        $lonTo = deg2rad($locTo_array['lon']);
+        $latFrom = deg2rad($locFrom_array['latitude']);
+        $lonFrom = deg2rad($locFrom_array['longitude']);
+        $latTo = deg2rad($locTo_array['latitude']);
+        $lonTo = deg2rad($locTo_array['longitude']);
 
         // haversineDistance
         $latDelta = $latTo - $latFrom;
