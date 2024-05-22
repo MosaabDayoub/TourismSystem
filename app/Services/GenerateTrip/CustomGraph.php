@@ -100,29 +100,31 @@ class CustomGraph extends Graph
         $changecity,
         $hotel,
         $PreferedPlacesselected,
+        $travelmethod,
+        $end
     ) {
 
         $i = 0;
+        $unshift_hotel = false;
         $resturants_level1 = [];
         $PreferedPlacesselected[] = "Resturants2";
         ${"level" . $i} = [];
 
-        if (array_key_exists('Airport', $places_multi)) {
+        if ($travelmethod == "plane") {
             $root = $places_multi['Airport'][0];
+
         } else {
             $root = $hotel;
-
+            $unshift_hotel = true;
         }
 
         $startnode1 = self::createNode($graph, $root);  // create start node
         ${"level" . $i}[] = $startnode1;
 
         array_unshift($PreferedPlacesselected, "Resturants1");
-
-        if(array_key_exists('Airport', $places_multi) || $changecity == true) {
+        if($travelmethod == "plane" || $changecity == true) {
             array_unshift($PreferedPlacesselected, "Hotels");
         }
-
         //create levels
         foreach($PreferedPlacesselected as $PreferedPlaceselected) {
             $i += 1;
@@ -143,14 +145,8 @@ class CustomGraph extends Graph
 
             }
         }
-
         //create fake node (last level)
-        $end = ["id" => 1234567,"name" => "destination",
-        "lon" => 11.251828422382225,
-        "lat" => 40.803499350173176,
-        "price" => 0,
-        "placeType" => null,
-        ];
+
         $endnode = self::createNode($graph, $end);
 
         foreach(${"level" . $i} as $resturants2) {

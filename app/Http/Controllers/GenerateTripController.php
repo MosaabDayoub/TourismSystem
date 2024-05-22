@@ -16,7 +16,7 @@ use Fhaculty\Graph\Vertex;
 use Fhaculty\Graph\Edge\Base;
 use Fhaculty\Graph\Edge\Directed ;
 use Fhaculty\Graph\Attribute\AttributeBagNamespaced ;
-use Fhaculty\Graph\Set\Vertices ;
+use Fhaculty\Graph\Set\Vertices;
 use Graphp\GraphViz\GraphViz;
 
 class GenerateTripController extends Controller
@@ -25,7 +25,6 @@ class GenerateTripController extends Controller
     {
 
         $startingLetter = strtolower($request->input('letter'));
-
 
         if (!$startingLetter) {
             return response()->json(['error' => 'No starting letter provided'], Response::HTTP_BAD_REQUEST);
@@ -36,7 +35,7 @@ class GenerateTripController extends Controller
 
 
         if ($cities->isEmpty()) {
-            return response()->json(['message' => 'No cities found starting with the letter ' . strtoupper($startingLetter)], Response::HTTP_OK);
+            return response()->json(['message' => 'No cities found starting with the letter ' . strtoupper($startingLetter)], Response::HTTP_NOT_FOUND);
         }
 
 
@@ -57,7 +56,7 @@ class GenerateTripController extends Controller
 
 
         if ($countries->isEmpty()) {
-            return response()->json(['message' => 'No countries found starting with the letter ' . strtoupper($startingLetter)], Response::HTTP_OK);
+            return response()->json(['message' => 'No countries found starting with the letter ' . strtoupper($startingLetter)], Response::HTTP_NOT_FOUND);
         }
 
 
@@ -120,7 +119,7 @@ class GenerateTripController extends Controller
             }
         }
 
-        return $userplaces;
+        return $selected_types;
     }
 
     public static function haversineDistance($source, $destination)      // A function for calculate a haversineDistance between two point
@@ -142,441 +141,484 @@ class GenerateTripController extends Controller
 
     public function generate(Request $request)       // A function for generate the trip
     {
-        try {
-            $Data = $request->all();
-            $user_id = $Data['user_id'];
-            $fromCity = $Data['fromcity'];
-            $toCountry = $Data['tocountry'];
-            $numberOfDays = $Data['N.days'];
-            $numberOfPeople = $Data['N.people'];
-            $preferedplaces = $Data['preferedplaces'];
-            $preferedfood = $Data['preferedfood'];
-            $Date = $Data['date'];
-            $selectedplaces = $Data['places'];
-            if($Data['totalBudget'] == "Minimum") {
-                $Budget = 500;
-            }
-            if($Data['totalBudget'] == "Open") {
-                $Budget = PHP_INT_MAX;
-            } if($Data['totalBudget'] != "Minimum" && $Data['totalBudget'] != "Open") {
-                $Budget = $Data['totalBudget'];
-            }
-            $daysofcity = 0;
-            $cityindex = 0;
-            $ticketprice = 0;
-            $Totalcost = 0;
-            $rest = false;
-            $EconomicSituation = "orange";
-            $previoustype = ['nightplace'];
-            $visited = [];
-            $response = [];       // response Array Initialization
-            $requiredFields = ['user_id','fromcity','tocountry','N.days','N.people','preferedplaces','preferedfood','date','totalBudget','places'
-            ];
-            $missingFields = [];
+        //       try {
+        $Data = $request->all();
+        $user_id = $Data['user_id'];
+        $fromCity = $Data['fromcity'];
+        $toCountry = $Data['tocountry'];
+        $numberOfDays = $Data['N.days'];
+        $numberOfPeople = $Data['N.people'];
+        $preferedplaces = $Data['preferedplaces'];
+        $preferedfood = $Data['preferedfood'];
+        $Date = $Data['date'];
+        $selectedplaces = $Data['places'];
+        if($Data['totalBudget'] == "Minimum") {
+            $Budget = 500;
+        }
+        if($Data['totalBudget'] == "Open") {
+            $Budget = 500000;
+        } if($Data['totalBudget'] != "Minimum" && $Data['totalBudget'] != "Open") {
+            $Budget = $Data['totalBudget'];
+        }
+        $daysofcity = 0;
+        $cityindex = 0;
+        $ticketprice = 0;
+        $ticketprice_return = 0;
+        $Totalcost = 0;
+        $Trip_balancing = 0;
+        $rest = false;
+        $lastday = false;
+        $EconomicSituation = "green";
+        $previoustype = ['nightplace'];
+        $visited = [];
+        $response = [];       // response Array Initialization
+        $requiredFields = ['user_id','fromcity','tocountry','N.days','N.people','preferedplaces','preferedfood','date','totalBudget','places'
+        ];
+        $missingFields = [];
+        $end_des = ["id" => 1234567,"name" => "destination",
+        "lon" => 11.251828422382225,
+        "lat" => 40.803499350173176,
+        "price" => 0,
+        "placeType" => null,
+        ];
 
-            foreach ($requiredFields as $field) {
-                if (empty($Data[$field])) {
-                    $missingFields[] = $field;
+        foreach ($requiredFields as $field) {
+            if (empty($Data[$field])) {
+                $missingFields[] = $field;
+            }
+        }
+        if ($Budget < 500) {
+            return response()->json(
+                ['error' => "Minimum Budget is 500 "],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        if (!empty($missingFields)) {
+            return response()->json(
+                ['error' => "Missing Required Field"],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+        if (count($preferedplaces) < 2) {
+            return response()->json(
+                ['error' => "You Can't Select Less Than 2 Types Of Places "],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        if ($numberOfDays > 30) {
+            return response()->json(
+                ['error' => "Maximum Number Of Days is 30 "],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+        if ($numberOfPeople > 30) {
+            return response()->json(
+                ['error' => "Maximum Nummber Of People is 30"],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        $userExists = DB::table('user')->where('id', $user_id)->exists();
+        if (!$userExists) {
+            return response()->json(
+                ['error' => "User With Id {$user_id} Doesn't Exist."],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        // fetch cities of the desination country
+        $countrycitiesQuery = DB::table('City')
+        ->join('country', 'City.country', '=', 'country.country_name')
+        ->select('City.name as name', "city.capital")
+        ->where('country.country_name', '=', $toCountry)
+        ->get()->toArray();
+
+        if (empty($countrycitiesQuery)) {
+            return response()->json(
+                ['error' => "'$toCountry' Is Not Supported"],
+                Response::HTTP_NOT_FOUND
+            );
+        }
+
+        $countrycities0['name'] = array_column($countrycitiesQuery, 'name');          // array include the city
+        $countrycities2['capital'] = array_column($countrycitiesQuery, 'capital');       // array include numbers which indicate if the city is a capital
+        $countrycities1 = array_combine($countrycities0['name'], $countrycities2['capital']);    // array include cities of the desination country as a key and numbers which indicate if this city is a capital as value
+
+        $schedule = self::citydays($countrycities1, $numberOfDays);
+        $countrycities = array_keys($schedule);
+
+        for ($i = 1 ; $i <= $numberOfDays ;$i++) {         // loop for every day in the trip
+            $changecity = false;
+            $travelmethod = null;
+            $TravelCost = 0;
+            $TravelCost_return = 0;
+            $time = 0;
+            $transportation_cost = 0;
+            $userplacestime = [];
+            $vertexes = [];
+            $daysofcity++;
+            $BudgetOfDay = floor(($Budget - $Totalcost + $Trip_balancing) / ($numberOfDays - ($i - 1)));
+
+            if ($i == 1) {        // Day1
+                $date = $Date ;
+                $destinationcityname = $countrycities[0];
+                $City_name = $countrycities[0];
+                $destinationcityQuery = DB::table('City')->select('*')->where('name', $destinationcityname)->first();     // fetch the destination city information from database
+                $destinationcity = $destinationcityQuery ? get_object_vars($destinationcityQuery) : null; // to convert stdclass object to array
+                $sourcecityQuery = DB::table('City')->select('*')->where('name', $fromCity)->first();     // fetch the source city information from database
+                $sourcecity = $sourcecityQuery ? get_object_vars($sourcecityQuery) : null;  // to convert stdclass object to array
+                $From_city = $sourcecity;
+                if (empty($sourcecity)) {
+                    return response()->json(
+                        ['error' => "'$fromCity' City Is Not Supported"],
+                        Response::HTTP_NOT_FOUND
+                    );
                 }
-            }
-            if ($Budget < 500) {
-                return response()->json(
-                    ['error' => "Minimum Budget is 500 "],
-                    Response::HTTP_BAD_REQUEST
+                $distance = self::haversineDistance($sourcecity, $destinationcity);
+                $travelmethod = CustomGraph::travell_method($distance) ;
+                $ticketprice = ($distance / 1000) * 0.09 ;
+                $TravelCost = $ticketprice * $numberOfPeople;
+
+
+                // insert trip info into trip table
+                $tripid = DB::table('trip')->insertGetId(
+                    ['country' => $toCountry,
+                    'user_id' =>  $user_id,
+                    'from_city' => $sourcecity['city_id'],
+                    'budget' => $Data['totalBudget'],
+                    'number_of_people' => $numberOfPeople,
+                    'number_of_days' => $numberOfDays,
+                    'transportation' => $travelmethod,
+                    'trip_cost' => ceil($Totalcost),
+                    ]
                 );
-            }
 
-            if (!empty($missingFields)) {
-                return response()->json(
-                    ['error' => "Missing Required Field"],
-                    Response::HTTP_BAD_REQUEST
-                );
-            }
-            if (count($preferedplaces) < 2) {
-                return response()->json(
-                    ['error' => "You Can't Select Less Than 2 Types Of Places "],
-                    Response::HTTP_BAD_REQUEST
-                );
-            }
+                // fill the response
+                $response['trip_id'] = $tripid;
+                $response['date'] = date("Y-m-d", strtotime($Date));
+                $response['fromCity'] = $fromCity;
+                $response['destination'] = $toCountry;
+                $response['totalBudget'] = $Data['totalBudget'];
+                $response['numberOfPeople'] = $numberOfPeople;
 
-            if ($numberOfDays > 30) {
-                return response()->json(
-                    ['error' => "Maximum Number Of Days is 30 "],
-                    Response::HTTP_BAD_REQUEST
-                );
-            }
-            if ($numberOfPeople > 30) {
-                return response()->json(
-                    ['error' => "Maximum Nummber Of People is 30"],
-                    Response::HTTP_BAD_REQUEST
-                );
-            }
 
-            $userExists = DB::table('user')->where('id', $user_id)->exists();
-            if (!$userExists) {
-                return response()->json(
-                    ['error' => "User With Id {$user_id} Doesn't Exist."],
-                    Response::HTTP_BAD_REQUEST
-                );
-            }
+            } else { //other days
+                $date = date("Y-m-d", strtotime($date . ' +1 day'));
+                if($daysofcity > $schedule[$City_name]) { // check if we have to change city
+                    $daysofcity = 1;
+                    $changecity = true;
+                    $visited = [];
+                    $sourcecityQuery = DB::table('City')->select('*')->where('name', $City_name)->first();     // fetch the source city information from database
+                    $sourcecity = get_object_vars($sourcecityQuery);  // to convert stdclass object to array
+                    $cityindex += 1;
+                    $City_name =  $countrycities[$cityindex];
+                    $destinationcityQuery = DB::table('City')->select('*')->where('name', $City_name)->first();     // fetch the destination city information from database
+                    $destinationcity = get_object_vars($destinationcityQuery);  // to convert stdclass object to array
 
-            // fetch cities of the desination country
-            $countrycitiesQuery = DB::table('City')
-            ->join('country', 'City.country', '=', 'country.country_name')
-            ->select('City.name as name', "city.capital")
-            ->where('country.country_name', '=', $toCountry)
-            ->get()->toArray();
-
-            if (empty($countrycitiesQuery)) {
-                return response()->json(
-                    ['error' => "'$toCountry' Is Not Supported"],
-                    Response::HTTP_NOT_FOUND
-                );
-            }
-
-            $countrycities0['name'] = array_column($countrycitiesQuery, 'name');          // array include the city
-            $countrycities2['capital'] = array_column($countrycitiesQuery, 'capital');       // array include numbers which indicate if the city is a capital
-            $countrycities1 = array_combine($countrycities0['name'], $countrycities2['capital']);    // array include cities of the desination country as a key and numbers which indicate if this city is a capital as value
-
-            $schedule = self::citydays($countrycities1, $numberOfDays);
-            $countrycities = array_keys($schedule);
-
-            for ($i = 1 ; $i <= $numberOfDays ;$i++) {         // loop for every day in the trip
-                $changecity = false;
-                $travelmethod = null;
-                $TravelCost = 0;
-                $time = 0;
-                $userplacestime = [];
-
-                $daysofcity++;
-                $BudgetOfDay = floor(($Budget - $Totalcost) / ($numberOfDays - ($i - 1)));
-
-                if ($i == 1) {        // Day1
-                    $date = $Date ;
-                    $destinationcityname = $countrycities[0];
-                    $City_name = $countrycities[0];
-                    $destinationcityQuery = DB::table('City')->select('*')->where('name', $destinationcityname)->first();     // fetch the destination city information from database
-                    $destinationcity = $destinationcityQuery ? get_object_vars($destinationcityQuery) : null; // to convert stdclass object to array
-                    $sourcecityQuery = DB::table('City')->select('*')->where('name', $fromCity)->first();     // fetch the source city information from database
-                    $sourcecity = $sourcecityQuery ? get_object_vars($sourcecityQuery) : null;  // to convert stdclass object to array
-                    if (empty($sourcecity)) {
-                        return response()->json(
-                            ['error' => "'$fromCity' City Is Not Supported"],
-                            Response::HTTP_NOT_FOUND
-                        );
-                    }
                     $distance = self::haversineDistance($sourcecity, $destinationcity);
                     $travelmethod = CustomGraph::travell_method($distance) ;
-                    $ticketprice = ($distance / 1000) * 0.09 ;
-                    $TravelCost = $ticketprice * $numberOfPeople;
-
-
-                    // insert trip info into trip table
-                    $tripid = DB::table('trip')->insertGetId(
-                        ['country' => $toCountry,
-                        'user_id' =>  $user_id,
-                        'from_city' => $sourcecity['city_id'],
-                        'budget' => $Data['totalBudget'],
-                        'number_of_people' => $numberOfPeople,
-                        'number_of_days' => $numberOfDays,
-                        'transportation' => $travelmethod,
-                        'trip_cost' => ceil($Totalcost),
-                        ]
-                    );
-
-                    // fill the response
-                    $response['trip_id'] = $tripid;
-                    $response['date'] = date("Y-m-d", strtotime($Date));
-                    $response['fromCity'] = $fromCity;
-                    $response['destination'] = $toCountry;
-                    $response['totalBudget'] = $Data['totalBudget'];
-                    $response['numberOfPeople'] = $numberOfPeople;
-
-
-                } else { //other days
-                    $date = date("Y-m-d", strtotime($date . ' +1 day'));
-                    if($daysofcity > $schedule[$City_name]) { // check if we have to change city
-                        $daysofcity = 1;
-                        $changecity = true;
-                        $visited = [];
-                        $sourcecityQuery = DB::table('City')->select('*')->where('name', $City_name)->first();     // fetch the source city information from database
-                        $sourcecity = get_object_vars($sourcecityQuery);  // to convert stdclass object to array
-                        $cityindex += 1;
-                        $City_name =  $countrycities[$cityindex];
-                        $destinationcityQuery = DB::table('City')->select('*')->where('name', $City_name)->first();     // fetch the destination city information from database
-                        $destinationcity = get_object_vars($destinationcityQuery);  // to convert stdclass object to array
-
-                        $distance = self::haversineDistance($sourcecity, $destinationcity);
-                        $travelmethod = CustomGraph::travell_method($distance) ;
-                        if($travelmethod == "plane") {
-                            $ticketprice = ($distance / 1000) * 0.09 ;
-                            $TravelCost = $ticketprice * $numberOfPeople;
-                        } else {
-                            $TravelCost = ($distance / 1000) * 1.6;  // distance * cost of 1 litre fuel
-                        }
-                    }
-
-                }
-
-                $BudgetOfDay -= $TravelCost;
-                if($changecity || $i == 1) {
-                    $index = 1;
-                } else {
-                    $index = 0;
-                }
-                if($i == 1) {
-                    $root = null;
-                } else {
-                    $root = $hotelAttributes;
-                }
-
-                $custompreferedplaces = self::selectRandomTypes($preferedplaces, $EconomicSituation, $previoustype);
-
-
-                foreach($selectedplaces[ $City_name] as $citychoosentypes => $citychoosenplaces) {
-
-                    if($citychoosentypes === "resturant" || $citychoosentypes === "hotel") {
-                        continue;
+                    if($travelmethod == "plane") {
+                        $ticketprice = ($distance / 1000) * 0.09 ;
+                        $TravelCost = $ticketprice * $numberOfPeople;
                     } else {
+                        $TravelCost = ($distance / 1000) * 1.6;  // distance * cost of 1 litre fuel
+                    }
+                }
 
-                        if(!empty($citychoosenplaces)) {
+            }
+            if($i == $numberOfDays) {
 
-                            foreach($citychoosenplaces as $citychoosenplace) {
+                $lastday = true;
+            }
+            $BudgetOfDay -= $TravelCost;
+            if($changecity || $i == 1) {
+                $index = 1;
+            } else {
+                $index = 0;
+            }
+            if($i == 1) {
+                $root = null;
+            } else {
+                $root = $hotelAttributes;
+            }
 
-                                if(!in_array($citychoosenplace['name'], $visited)) {
-                                    $userplacestime[$citychoosentypes] = $citychoosenplace['time'];
-                                    if(!in_array($citychoosentypes, $custompreferedplaces)) {
+            $custompreferedplaces = self::selectRandomTypes($preferedplaces, $EconomicSituation, $previoustype);
+
+            foreach($selectedplaces[ $City_name] as $citychoosentypes => $citychoosenplaces) {
+
+                if($citychoosentypes === "resturant" || $citychoosentypes === "hotel") {
+                    continue;
+                } else {
+
+                    if(!empty($citychoosenplaces)) {
+
+                        foreach($citychoosenplaces as $citychoosenplace) {
+
+                            if(!in_array($citychoosenplace['name'], $visited)) {
+                                $userplacestime[$citychoosentypes] = $citychoosenplace['time'];
+                                if(!in_array($citychoosentypes, $custompreferedplaces)) {
+                                    array_unshift($custompreferedplaces, $citychoosentypes);
+                                } else {
+                                    $key1 = array_search($citychoosentypes, $custompreferedplaces);
+                                    if ($key1 !== false && $key1 >  0) {
+                                        unset($custompreferedplaces[$key1]);
+                                        $custompreferedplaces = array_values($custompreferedplaces);
                                         array_unshift($custompreferedplaces, $citychoosentypes);
-                                    } else {
-                                        $key1 = array_search($citychoosentypes, $custompreferedplaces);
-                                        if ($key1 !== false && $key1 >  0) {
-                                            unset($custompreferedplaces[$key1]);
-                                            $custompreferedplaces = array_values($custompreferedplaces);
-                                            array_unshift($custompreferedplaces, $citychoosentypes);
 
-                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                if(array_sum($userplacestime) >= 4) {
-                    $custompreferedplaces = array_keys($userplacestime);
-                    if($schedule[$City_name] > 1) {
-                        $half_size = ceil(count($custompreferedplaces) / 2);
-                        $custompreferedplaces = array_slice($custompreferedplaces, 0, $half_size);
+            if(array_sum($userplacestime) >= 4) {
+                $custompreferedplaces = array_keys($userplacestime);
+                if($schedule[$City_name] > 1) {
+                    $half_size = ceil(count($custompreferedplaces) / 2);
+                    $custompreferedplaces = array_slice($custompreferedplaces, 0, $half_size);
 
-                    }
-                };
-
-                $places_day = DataImport::importData($custompreferedplaces, $Data, $City_name, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces);
-
-                $graph = new Graph();
-                $graph1 = CustomGraph::buildGraph($places_day, $graph, $changecity, $root, $places_day['preferred']);      // create A custom graph which contain the Possible paths for USER:
-                //     $graphviz = new GraphViz(['binary' => 'C:\Program Files\Graphviz\bin\dot.exe']);      // for display the created graph
-                //    $graphviz->display($graph2);
-                $sourceNode = $graph1->getVertex(0);
-                $sourcNodeType = $sourceNode->getAttribute('name');
-                list($distances, $previous, $paths) = DijkstraAlgorithm::allShortestPaths($graph1, $sourceNode);
-                $path = end($paths);
-
-                $currenthotel = $graph1->getvertex($path[$index]);
-                $nodeAttributes = $currenthotel->getAttributeBag();
-                $hotelAttributes = $nodeAttributes->getAttributes();
-
-                $previoustype =  $custompreferedplaces;
-
-                // calculate the total cost of all nodes
-                $cost = $TravelCost;
-
-                if($i == 1 || $changecity == true) {
-                    $shiftfirstnode = true;
                 }
-                foreach ($path as $node_id) {
-                    if($shiftfirstnode == true) {
-                        $shiftfirstnode = false;
-                        continue;
-                    }
-                    $node = $graph1->getvertex($node_id);
-                    $nodeprice = $node->getAttribute('price');
+            };
 
-                    $nodetype = $node->getAttribute('placeType');
-
-                    if(reset($path) != $node_id) {
-                        $preedges = $node->getEdgesIn();
-                        foreach($preedges as $preedge) {
-                            $edgetravelmethod =  $preedge->getAttribute('travelMethod');
-                            $edgedistance =  $preedge->getAttribute('distance');
-                            if($edgetravelmethod == "car") {
-                                $cost += ($edgedistance / 1000) * 1.6; // 1.6 is avg of Taxi cost in 1KM
-                            }
-                        }
-                    }
-
-                    if($nodetype  == "hotel") {
-                        $cost += $nodeprice *  (($numberOfPeople / 2) + ($numberOfPeople % 2));
-
-                    } else {
-                        $cost += $nodeprice * $numberOfPeople;
-
-                    }
+            $places_day = DataImport::importData($custompreferedplaces, $Data, $City_name, $travelmethod, $BudgetOfDay, $numberOfPeople, $visited, $selectedplaces, $lastday);
+            $graph = new Graph();
+            $graph1 = CustomGraph::buildGraph($places_day, $graph, $changecity, $root, $places_day['preferred'], $travelmethod, $end_des);      // create A custom graph which contain the Possible paths for USER:
+            //     $graphviz = new GraphViz(['binary' => 'C:\Program Files\Graphviz\bin\dot.exe']);      // for display the created graph
+            //    $graphviz->display($graph2);
+            $sourceNode = $graph1->getVertex(0);
+            $sourcNodeType = $sourceNode->getAttribute('name');
+            list($distances, $previous, $paths) = DijkstraAlgorithm::allShortestPaths($graph1, $sourceNode);
+            $path = end($paths);
+            foreach ($graph1->getVertices() as $vertex) {
+                $node_id = $vertex->getId();
+                if(in_array($node_id, $path)) {
+                    $vertexes[] = $vertex;
                 }
-                $trip_days["day_" . $i]['EconomicSituation'] = $EconomicSituation;
-                $Budget_difference = ($BudgetOfDay + $TravelCost) - ceil($cost);
+            }
+            $currenthotel = $graph1->getvertex($path[$index]);
+            $nodeAttributes = $currenthotel->getAttributeBag();
+            $hotelAttributes = $nodeAttributes->getAttributes();
+            $graph1 = $graph1->createGraphCloneVertices($vertexes);
+            $pre_lastnodeid = $vertexes[count($vertexes) - 1]->getId();
 
-                if($Budget_difference > 75) {
-                    $EconomicSituation = "green";
-                } elseif($Budget_difference < -75) {
-                    $EconomicSituation = "red";
+            $lastnode = CustomGraph::createNode($graph1, $hotelAttributes);
+            CustomGraph::addWeightedEdge($graph1->getVertex($pre_lastnodeid), $lastnode);
+            if($lastday) {
+                $the_lastnode = CustomGraph::createNode($graph1, $places_day['Airport'][0]);
+                CustomGraph::addWeightedEdge($lastnode, $the_lastnode);
+                $distance_return = self::haversineDistance($places_day['Currentcity'], $From_city);
+                $travelmethod_return = CustomGraph::travell_method($distance_return) ;
+                if($travelmethod_return == "plane") {
+                    $ticketprice_return  = ($distance_return  / 1000) * 0.09 ;
+                    $TravelCost_return = $ticketprice_return * $numberOfPeople;
                 } else {
-                    $EconomicSituation = "orange";
+                    $TravelCost_return = ($distance_return  / 1000) * 1.6;  // distance * cost of 1 litre fuel
                 }
-
-                $Totalcost += $cost ;
-
-                if($i ==  $numberOfDays) {
-
-                    DB::table('trip')
-                    -> where('trip.id', '=', $tripid)
-                    ->update(['trip.trip_cost' => $Totalcost]);
-                }
-
-
-                // insert trip info into tripday table
-                $dayid = DB::table('tripday')->insertGetId(
-                    ['trip_id' => $tripid,
-                    'city_id' =>  $places_day['Currentcity']['city_id'],
-                    'date' => $date,
-                    'hotel_id' => $hotelAttributes['id'],
-                    'transportaition_method' => $travelmethod,
-                    'day_cost' => ceil($cost),
-                    ]
-                );
-
-                $trip_days["day_" . $i]['dayId'] = $dayid;
-
-                $trip_days["day_" . $i]['custompreferedplaces'] = $custompreferedplaces;
-
-
-                $trip_days["day_" . $i]['date'] = $date;
-                $trip_days["day_" . $i]['city'] = $places_day['Currentcity'];
-                $trip_days["day_" . $i]['neededMony'] = ceil($cost) ;
-
-
-
-                // flightReservation
-                if($travelmethod == "plane") {
-                    if($i == 1) {
-                        $travelfromcity = $fromCity;
-                    } else {
-                        $travelfromcity = $sourcecity['name'];
-                    }
-                    $response['flightReservation']["day_" . $i] = [ "airportId" => $places_day['Airport'][0]['id'] ,"fromCity" => $travelfromcity ,
-                    "airportName" => $places_day['Airport'][0]['name'],"address" => $places_day['Airport'][0]['address'],
-                    "price" => ceil($ticketprice) ,"toatlAmountOfMony" => ceil($ticketprice * $Data['N.people']) ,"location" => $places_day['Airport'][0]['location']
-                      ];
-                }
-
-                // "hotelReservation"
-                if($i == 1 || $changecity == true) {
-                    $hotelnode = $graph1-> getvertex($path[1]);    // get hotel node by id
-
-                    $hotelAttr = $hotelnode->getAttributeBag();  // get the attributes bag
-                    $response['hotelReservation']["day_" . $i] = $hotelAttr->getAttributes();   // get the hotel node attribute
-                }
-
-                // places of day:
-                $dayPlaces = [];
-                $Resturantsofday = [];
-                $n = 0;
-                $isFirstnode = true;
-
-                foreach ($path as $key => $nodeid) {
-                    $n += 1;
-                    $node = $graph1->getvertex($nodeid);
-                    $Attributes = $node->getAttributeBag();
-                    $NodeAttributes = $Attributes->getAttributes();
-                    $visited[] = $NodeAttributes['name'];
-                    if($isFirstnode == true) {
-                        $Attributes->setAttribute("transportaionMethod", $travelmethod);
-                        $dayPlaces[$n] = $Attributes->getAttributes();
-                    } else {
-                        $edges_in = $node->getEdgesFrom($prenode);
-                        foreach($edges_in as $edge_in) {
-                            $dayPlaces[$n] = $Attributes->getAttributes();
-                            $dayPlaces[$n]['transportaionMethod'] = $edge_in->getAttribute('travelMethod');
-                            $dayPlaces[$n]['distancefromlastplace'] = ceil($edge_in->getAttribute('distance')) ;
-
-                        }
-
-                        // insert place into dayplaces table
-
-                        $place_type = $dayPlaces[$n]['placeType'];
-
-                        if($place_type == "hotel") {
-                            DB::table('dayplaces')->insert(
-                                ['day_id' => $dayid,
-                                 'place_id' =>  $dayPlaces[$n]['id'],
-                                 'place_type' =>  $place_type,
-                                 'index' =>  $key + 1  ,
-                                 'transport_method' => $dayPlaces[$n]['transportaionMethod'],
-                                 'money_amount' => $dayPlaces[$n]['price'] * $numberOfPeople,
-                                 'pre_distance' => $dayPlaces[$n]['distancefromlastplace']
-                                 ]
-                            );
-
-
-                        } elseif($place_type == "airport") {
-                            DB::table('dayplaces')->insert(
-                                ['day_id' => $dayid,
-                                'place_id' =>  $dayPlaces[$n]['id'],
-                                'place_type' =>  $place_type,
-                                'index' =>  $key + 1  ,
-                                'transport_method' => "plane",
-                                'money_amount' => ceil($ticketprice *  $numberOfPeople),
-                                'pre_distance' => 0
-                                ]
-                            );
-
-                        } else {
-                            DB::table('dayplaces')->insert(
-                                ['day_id' => $dayid,
-                                'place_id' =>  $dayPlaces[$n]['id'],
-                                'place_type' =>  $place_type,
-                                'index' =>  $key + 1 ,
-                                'transport_method' => $dayPlaces[$n]['transportaionMethod'],
-                                'money_amount' => ceil($dayPlaces[$n]['price'] * $numberOfPeople),
-                                'pre_distance' => $dayPlaces[$n]['distancefromlastplace']
-                                ]
-                            );
-                        }
-
-                    }
-
-                    $isFirstnode = false;
-                    $prenode = $graph1->getvertex($nodeid);
-
-                }
-
-
-                $trip_days["day_" . $i]['dayPlaces'] = $dayPlaces;
-
-                $response['tripDays'] = $trip_days ;
 
             }
 
-            $ticketprice = 0;
-            $response['TotalCost'] = ceil($Totalcost) ;
 
-            return response()->json(['trip' => $response], Response::HTTP_OK);
-
-        } catch (\Exception $error) {
-            return response()->json(
-                ['error' => $error->getMessage()],
-                Response::HTTP_INTERNAL_SERVER_ERROR
+            $previoustype =  $custompreferedplaces;
+            // insert trip info into tripday table
+            $dayid = DB::table('tripday')->insertGetId(
+                ['trip_id' => $tripid,
+                'city_id' =>  $places_day['Currentcity']['city_id'],
+                'date' => $date,
+                'hotel_id' => $hotelAttributes['id'],
+                'transportaition_method' => $travelmethod
+                ]
             );
+
+            // calculate the total cost of all nodes
+            $cost = 0;
+
+            // places of day:
+            $dayPlaces = [];
+            $Resturantsofday = [];
+            $hotel_price = 0;
+            $n = 0;
+            $isFirstnode = true;
+            $hotel_check = false;
+
+            foreach ($graph1->getVertices() as $node) {
+                $n += 1;
+                $Attributes = $node->getAttributeBag();
+                $NodeAttributes = $Attributes->getAttributes();
+
+                $visited[] = $NodeAttributes['name'];
+                if($isFirstnode == true) {
+                    if($NodeAttributes['placeType'] == 'hotel' && $changecity) {
+                        $dayPlaces[$n] = $Attributes->getAttributes();
+                        $dayPlaces[$n]['price'] = 0;
+                        $dayPlaces[$n]['transportaionMethod'] = null;
+                        $dayPlaces[$n]['distancefromlastplace'] = 0;
+                        $dayPlaces[$n]['transportaioncost'] = 0;
+
+                    } elseif($NodeAttributes['placeType'] == 'airport') {
+                        $Attributes->setAttribute("transportaionMethod", $travelmethod);
+                        $dayPlaces[$n] = $Attributes->getAttributes();
+                        $dayPlaces[$n]['distancefromlastplace'] = $distance;
+                        $dayPlaces[$n]['ticketprice'] = ceil($ticketprice);
+                        $cost += ceil($TravelCost);
+                    } elseif($NodeAttributes['placeType'] == 'hotel' && $changecity == false) {
+                        $dayPlaces[$n] = $Attributes->getAttributes();
+                        $dayPlaces[$n]['transportaionMethod'] = null;
+                        $dayPlaces[$n]['distancefromlastplace'] = 0;
+                        $dayPlaces[$n]['transportaioncost'] = 0;
+                        $cost += $dayPlaces[$n]['price'] * $numberOfPeople;
+                    }
+
+                } else {
+                    foreach($node->getEdgesIn() as $edge_in) {
+                        $dayPlaces[$n] = $Attributes->getAttributes();
+                        $dayPlaces[$n]['transportaionMethod'] = $edge_in->getAttribute('travelMethod');
+                        $dayPlaces[$n]['distancefromlastplace'] = ceil($edge_in->getAttribute('distance')) ;
+                        $dayPlaces[$n]['transportaioncost'] = ceil(($edge_in->getAttribute('distance') / 1000) * 1.6); // 1.6 is avg of Taxi cost in 1KM
+                        $transportation_cost += $dayPlaces[$n]['transportaioncost'];
+                        if(($dayPlaces[$n]['placeType'] == "hotel" && $hotel_check == false)) {
+                            $hotel_price = $dayPlaces[$n]['price'] * $numberOfPeople;
+                            $cost += $hotel_price ;
+
+                        } elseif($dayPlaces[$n]['placeType'] != "airport" && $dayPlaces[$n]['placeType'] != "hotel") {
+                            $cost += $dayPlaces[$n]['price'] * $numberOfPeople;
+                        } elseif($dayPlaces[$n]['placeType'] == "airport") {
+                            $dayPlaces[$n]['ticketprice_return'] = ceil($ticketprice_return);
+                            $cost += ceil($TravelCost_return);
+                        }
+
+                    }
+                }
+                // insert place into dayplaces table
+
+                $place_type = $dayPlaces[$n]['placeType'];
+
+                if($place_type == "hotel") {
+                    $hotel_check = true;
+                    DB::table('dayplaces')->insert(
+                        ['day_id' => $dayid,
+                         'place_id' =>  $dayPlaces[$n]['id'],
+                         'place_type' =>  $place_type,
+                         'index' =>  $n  ,
+                         'transport_method' => $dayPlaces[$n]['transportaionMethod'],
+                         'money_amount' => $hotel_price,
+                         'pre_distance' => $dayPlaces[$n]['distancefromlastplace']
+                         ]
+                    );
+
+                } elseif($place_type == "airport") {
+                    DB::table('dayplaces')->insert(
+                        ['day_id' => $dayid,
+                        'place_id' =>  $dayPlaces[$n]['id'],
+                        'place_type' =>  $place_type,
+                        'index' =>  $n  ,
+                        'transport_method' => "plane",
+                        'money_amount' => ceil($ticketprice *  $numberOfPeople),
+                        'pre_distance' => 0
+                        ]
+                    );
+
+                } else {
+                    DB::table('dayplaces')->insert(
+                        ['day_id' => $dayid,
+                        'place_id' =>  $dayPlaces[$n]['id'],
+                        'place_type' =>  $place_type,
+                        'index' =>  $n ,
+                        'transport_method' => $dayPlaces[$n]['transportaionMethod'],
+                        'money_amount' => ceil($dayPlaces[$n]['price'] * $numberOfPeople),
+                        'pre_distance' => $dayPlaces[$n]['distancefromlastplace']
+                        ]
+                    );
+                }
+
+
+                $isFirstnode = false;
+
+            }
+            $cost += $transportation_cost;
+
+            $trip_days["day_" . $i]['EconomicSituation'] = $EconomicSituation;
+            $Budget_difference = ($BudgetOfDay + $TravelCost) - ceil($cost);
+            $Trip_balancing += $Budget_difference;
+
+            if($Trip_balancing < -100) {
+                $EconomicSituation = "red";
+            } elseif($Trip_balancing > 0) {
+                $EconomicSituation = "green";
+            } else {
+                $EconomicSituation = "orange";
+            }
+
+            $Totalcost += $cost ;
+
+            if($i ==  $numberOfDays) {
+
+                DB::table('trip')
+                -> where('trip.id', '=', $tripid)
+                ->update(['trip.trip_cost' => $Totalcost]);
+            }
+
+
+            DB::table('tripday')
+            -> where('trip_id', '=', $tripid)
+            -> where('id', '=', $dayid)
+            ->update(['day_cost' => $cost]);
+
+            $trip_days["day_" . $i]['dayId'] = $dayid;
+
+            $trip_days["day_" . $i]['custompreferedplaces'] = $custompreferedplaces;
+            $trip_days["day_" . $i]['$Budget_difference'] = $Budget_difference ;
+            $trip_days["day_" . $i]['$BudgetOfDay'] = $BudgetOfDay ;
+            $trip_days["day_" . $i]['transportation_cost'] = $transportation_cost ;
+            $trip_days["day_" . $i]['Trip_balancing '] = $Trip_balancing ;
+            $trip_days["day_" . $i]['TravelCost_return  '] = $TravelCost_return  ;
+
+            $trip_days["day_" . $i]['date'] = $date;
+            $trip_days["day_" . $i]['city'] = $places_day['Currentcity'];
+            $trip_days["day_" . $i]['neededMony'] = ceil($cost) ;
+
+            // flightReservation
+            if($travelmethod == "plane") {
+                if($i == 1) {
+                    $travelfromcity = $fromCity;
+                } else {
+                    $travelfromcity = $sourcecity['name'];
+                }
+                $response['flightReservation']["day_" . $i] = [ "airportId" => $places_day['Airport'][0]['id'] ,"fromCity" => $travelfromcity ,
+                "airportName" => $places_day['Airport'][0]['name'],"address" => $places_day['Airport'][0]['address'],
+                "price" => ceil($ticketprice) ,"toatlAmountOfMony" => ceil($ticketprice * $Data['N.people']) ,"location" => $places_day['Airport'][0]['location']
+                  ];
+            }
+
+            // "hotelReservation"
+            if($i == 1 || $changecity == true) {
+                $hotelnode = $graph1-> getvertex($path[1]);    // get hotel node by id
+
+                $hotelAttr = $hotelnode->getAttributeBag();  // get the attributes bag
+                $response['hotelReservation']["day_" . $i] = $hotelAttr->getAttributes();   // get the hotel node attribute
+            }
+
+
+            $trip_days["day_" . $i]['dayPlaces'] = $dayPlaces;
+
+            $response['tripDays'] = $trip_days ;
+
         }
+
+        $ticketprice = 0;
+        $response['TotalCost'] = ceil($Totalcost) ;
+
+
+        return response()->json(['trip' => $response], Response::HTTP_OK);
+
+        //      } catch (\Exception $error) {
+        return response()->json(
+            ['error' => $error->getMessage()],
+            Response::HTTP_INTERNAL_SERVER_ERROR
+        );
+        //     }
     }
 }

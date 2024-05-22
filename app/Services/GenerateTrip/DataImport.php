@@ -19,7 +19,6 @@ class DataImport
             $Totaltime += ${$preferred_place . "_avg"};
         }
 
-
         $times = [];
 
         foreach ($placesTypes as $preferred_place) {
@@ -31,19 +30,14 @@ class DataImport
 
         return $times;
     }
-    public static function calculatePlaceCosts($budgetOfDay, $preferred, $Shoppingprices)
+    public static function calculatePlaceCosts($budgetOfDay, $preferred)
     {
         $Totalcost = 0;
         foreach ($preferred as $preferred_place) {
 
-            if ($preferred_place == 'naturalplace') {
+            if ($preferred_place == 'naturalplace' || $preferred_place == 'shoppingplace') {
                 continue;
             }
-            if ($preferred_place == 'shoppingplace') {
-                ${$preferred_place . "_avg"} = array_sum($Shoppingprices) / count($Shoppingprices);
-                continue;
-            }
-
 
             if($preferred_place == 'resturant' || $preferred_place == 'hotel') {
                 ${$preferred_place . "_avg"} = DB::table("{$preferred_place}")->distinct()->avg('price');
@@ -72,15 +66,15 @@ class DataImport
         return $costs;
     }
 
-    public static function importData(array $preferred, array $data, $cityname, $travelmethod, $budgetofday, $N_person, $visitedplaces, $placesofuser)    // A funcyion for fetch Data from DB depending on user preferences
+    public static function importData(array $preferred, array $data, $cityname, $travelmethod, $budgetofday, $N_person, $visitedplaces, $placesofuser, $Last_day)    // A funcyion for fetch Data from DB depending on user preferences
     {
         $i = 0;
         $budgetofday -= 70;
         $budgetofday = $budgetofday / $N_person;
         $mindifference = PHP_INT_MAX;
         $Total_time = 7;
-        $shoppingprices = [43, 63, 83, 102, 122, 21, 31, 41, 51, 61, 54, 74, 94, 64, 74, 84, 94, 104, 114, 124, 134, 144, 154, 164, 174, 184, 194];
         $closesthoppingsprice = 0;
+
         $key = array_search("nightplace", $preferred);
         if ($key !== false && $key < count($preferred) - 1) {
 
@@ -93,12 +87,12 @@ class DataImport
         $preferred[] = "resturant";
         $preferred[] = "hotel";
 
-        $place_costs = self::calculatePlaceCosts($budgetofday, $preferred, $shoppingprices);
+        $place_costs = self::calculatePlaceCosts($budgetofday, $preferred);
         $placestime = DataImport::allocateTimeForPlaces($newpreferred, $Total_time);
 
 
         //find the airport of this capital
-        if($travelmethod === "plane") {
+        if($travelmethod === "plane" || $Last_day) {
             $Airport = DB::table('City')
 
             ->join('airport', 'City.city_id', '=', 'airport.city_id')
@@ -209,23 +203,23 @@ class DataImport
             }
 
             foreach (${"SelectedPlaces" . $i} as $key => $place) {
-                if($placeType == "naturalplace") {
+                if($placeType == "naturalplace" || $placeType == "shoppingplace") {
                     ${"SelectedPlaces" . $i}[$key]['price'] = 0;
                 }
-                if($placeType == "shoppingplace") {
-                    if($place_costs[$placeType ] < 0) {
-                        ${"SelectedPlaces" . $i}[$key]['price'] = 0;
-                    } else {
-                        foreach($shoppingprices as $price) {
-                            $newmindifference = abs($price - $place_costs[$placeType ]);
-                            if($newmindifference < $mindifference) {
-                                $closesthoppingsprice = $price;
-                            }
-                        }
-                        ${"SelectedPlaces" . $i}[$key]['price'] =  $closesthoppingsprice;
-                    }
-                    //
-                }
+                /*      if($placeType == "shoppingplace") {
+                          if($place_costs[$placeType ] < 0) {
+                              ${"SelectedPlaces" . $i}[$key]['price'] = 0;
+                          } else {
+                              foreach($shoppingprices as $price) {
+                                  $newmindifference = abs($price - $place_costs[$placeType ]);
+                                  if($newmindifference < $mindifference) {
+                                      $closesthoppingsprice = $price;
+                                  }
+                              }
+                              ${"SelectedPlaces" . $i}[$key]['price'] =  $closesthoppingsprice;
+                          }
+                          //
+                      }*/
                 ${"SelectedPlaces" . $i}[$key]['placeType'] = $placeType; // add type  for each element in array storage $selectedplaces
             }
 
@@ -237,7 +231,7 @@ class DataImport
 
 
             $budgetofday -= $places[$placeType][0]['price'];
-            $place_costs = self::calculatePlaceCosts($budgetofday, $preferred, $shoppingprices);
+            $place_costs = self::calculatePlaceCosts($budgetofday, $preferred);
             if(($key = array_search($placeType, $newpreferred)) !== false) {
                 unset($newpreferred[$key]);
 
@@ -338,7 +332,7 @@ class DataImport
             unset($preferred[$key]);
         }
 
-        $place_costs = self::calculatePlaceCosts($budgetofday, $preferred, $shoppingprices);
+        $place_costs = self::calculatePlaceCosts($budgetofday, $preferred);
 
 
         //fetch Hotels
