@@ -16,7 +16,7 @@ class CustomGraph extends Graph
 {
     public static function travell_method($distance1)      // A function for find transportaionMethod
     {
-        if  ($distance1 <= 1000) {
+        if  ($distance1 <= 3000) {
 
             return $transportaionMethod = "walking";
 
