@@ -69,7 +69,7 @@ class DataImport
     public static function importData(array $preferred, array $data, $cityname, $travelmethod, $budgetofday, $N_person, $visitedplaces, $placesofuser, $Last_day)    // A funcyion for fetch Data from DB depending on user preferences
     {
         $i = 0;
-        $budgetofday -= 70;
+
         $budgetofday = $budgetofday / $N_person;
         $mindifference = PHP_INT_MAX;
         $Total_time = 7;
@@ -88,8 +88,8 @@ class DataImport
         $preferred[] = "hotel";
 
         $place_costs = self::calculatePlaceCosts($budgetofday, $preferred);
+        $place_costs1 = $place_costs ;
         $placestime = DataImport::allocateTimeForPlaces($newpreferred, $Total_time);
-
 
         //find the airport of this capital
         if($travelmethod === "plane" || $Last_day) {
@@ -386,6 +386,8 @@ class DataImport
         $places['Currentcity'] = $currentcity;       // storege currentcity array in places array
 
         $places['preferred'] = $newpreferred1;
+        $places['$place_costs1'] = $place_costs1;
+
         return $places;  // $places is array of array contain kay type -> value :array of places
 
     }
